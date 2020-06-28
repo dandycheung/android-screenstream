@@ -1,4 +1,3 @@
-#include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,9 +5,12 @@
 #include <pthread.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <X11/Xlib.h>
+#include <X11/extensions/shape.h>
+#include "decode.h"
 
-#define BUFF_SIZE 256
-
+const uint32_t BUFF_SIZE = 1024 * 100;
 size_t frame_received = 0UL;
 static struct sockaddr_in *sender;
 Display *display;
@@ -16,24 +18,12 @@ Window window;
 int screen;
 char str[100];
 int len;
+uint32_t last_ip;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-
-int printaddr(char *tmp, struct sockaddr_in *addr)
-{
-    uint32_t ip = ntohl(addr->sin_addr.s_addr);
-    uint16_t port = ntohs(addr->sin_port);
-    return sprintf(tmp, "%d.%d.%d.%d:%d",
-                   ip >> 24 & 0xff,
-                   ip >> 16 & 0xff,
-                   ip >> 8 & 0xff,
-                   ip >> 0 & 0xff,
-                   port);
-}
 
 static void draw_state()
 {
-    len = sprintf(str, "%d ", frame_received);
-    printaddr(str + len, sender);
+    len = sprintf(str, "Connected: %s", inet_ntoa(sender->sin_addr));
     XStoreName(display, window, str);
 }
 
@@ -62,26 +52,34 @@ void receiver_thread(uint16_t *port)
         return;
     }
     printf("OK\n");
-    XEvent exppp;
-    memset(&exppp, 0, sizeof(exppp));
-    exppp.type = Expose;
-    exppp.xexpose.window = window;
+    // XEvent exppp;
+    // memset(&exppp, 0, sizeof(exppp));
+    // exppp.type = Expose;
+    // exppp.xexpose.window = window;
     while (1)
     {
         sender_size = addr_size;
         received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)sender, &sender_size);
         if (received > 0)
         {
+            if (last_ip != sender->sin_addr.s_addr)
+            {
+                last_ip = sender->sin_addr.s_addr;
+                frame_received = 0;
+                draw_state();
+                // XSendEvent(display, window, False, ExposureMask, &exppp);
+                XFlush(display);
+            }
             frame_received++;
-            buff[received] = 0;
-            printf("%d: %s\n", frame_received, buff);
-            //draw_state();
-            XSendEvent(display, window, False, ExposureMask, &exppp);
-            XFlush(display);
+            if (!decode_jpeg(buff, received))
+            {
+                fprintf(stderr, "Fail decode jpeg\n");
+            }
+            printf("%d: %d\n", frame_received, received);
         }
         else
         {
-            printf("Fail, %d bytes\n", received);
+            printf("ignore, %d bytes\n", received);
         }
     }
 }

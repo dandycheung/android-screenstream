@@ -1,7 +1,7 @@
-CPPFLAGS += -lX11 -lpthread
+LDFLAGS += -lX11 -lpthread -ljpeg
 
 
-main: main.c
+main: main.o decode_jpeg.o
 
 watch:
 	nodemon -w main.c -d 0.2 -x "make main && ./main"

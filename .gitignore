@@ -3,3 +3,6 @@ include/external
 include/frameworks
 include/hardware
 include/system
+linux/*.o
+linux/main
+linux/decode_jpeg
