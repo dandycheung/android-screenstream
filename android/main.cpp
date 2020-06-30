@@ -104,7 +104,8 @@ int main(int argc, char const *argv[])
         {
             fprintf(stderr, "Error capturing screen\n");
         }
-        sleep(1);
+        usleep(100);
+        //sleep(1);
     }
     return 0;
     printf("Exited\n");
