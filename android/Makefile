@@ -43,6 +43,6 @@ exec: build
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
-		./$(MODULE_NAME) 192.168.1.10 &" &
+		./$(MODULE_NAME) 192.168.1.10 &"
 
 .PHONY: build clean exec libs

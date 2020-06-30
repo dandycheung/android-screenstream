@@ -9,103 +9,149 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/shape.h>
 #include "decode.h"
+#define BUFF_SIZE 102400
+// sizeof(struct sockaddr_in)
+#define SOCK_SIZE 16U
 
-const uint32_t BUFF_SIZE = 1024 * 100;
 size_t frame_received = 0UL;
-static struct sockaddr_in *sender;
-Display *display;
-Window window;
-int screen;
-char str[100];
-int len;
-uint32_t last_ip;
+int fd;
+uint32_t nip, ip;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
-static void draw_state()
+static int setup_connection(uint16_t *port)
 {
-    len = sprintf(str, "Connected: %s", inet_ntoa(sender->sin_addr));
-    XStoreName(display, window, str);
-}
-
-void receiver_thread(uint16_t *port)
-{
-    char buff[BUFF_SIZE];
     struct sockaddr_in addr;
-    int fd = socket(AF_INET, SOCK_DGRAM, 0);
-    socklen_t received, sender_size, addr_size = sizeof(struct sockaddr_in);
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd < 0)
     {
         printf("Fail listen socket");
-        return;
+        return 0;
     }
 
-    memset(&addr, 0, addr_size);
+    memset(&addr, 0, SOCK_SIZE);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(*port);
     printf("Listening on %d ", *port);
-    if (bind(fd, (struct sockaddr *)&addr, addr_size) != 0)
+    if (bind(fd, (struct sockaddr *)&addr, SOCK_SIZE) != 0)
     {
         printf("Fail\n");
         close(fd);
-        return;
+        return 0;
     }
     printf("OK\n");
+    return 1;
+}
+
+static void receiver_thread(Window *window)
+{
+    socklen_t sender_size;
+    size_t received;
+    Display *display = XOpenDisplay(NULL);
+    char buff[BUFF_SIZE];
+    struct sockaddr_in *sender = calloc(SOCK_SIZE, 1);
+
+    if (display == NULL)
+    {
+        fprintf(stderr, "Cannot open display in thread\n");
+        exit(1);
+    }
     // XEvent exppp;
     // memset(&exppp, 0, sizeof(exppp));
     // exppp.type = Expose;
     // exppp.xexpose.window = window;
     while (1)
     {
-        sender_size = addr_size;
+        sender_size = SOCK_SIZE;
         received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)sender, &sender_size);
         if (received > 0)
         {
-            if (last_ip != sender->sin_addr.s_addr)
+            if (nip != sender->sin_addr.s_addr)
             {
-                last_ip = sender->sin_addr.s_addr;
-                frame_received = 0;
-                draw_state();
+                printf("Ignoring packet from different initial IP!.");
+                continue;
+                // nip = sender->sin_addr.s_addr;
+                // frame_received = 0;
                 // XSendEvent(display, window, False, ExposureMask, &exppp);
-                XFlush(display);
+                //XFlush(display);
             }
             frame_received++;
-            if (!decode_jpeg(buff, received))
+            if (!decode_jpeg_run(buff, &received))
             {
                 fprintf(stderr, "Fail decode jpeg\n");
             }
-            printf("%d: %d\n", frame_received, received);
+            printf("%lu: %lu\n", frame_received, received);
         }
         else
         {
-            printf("ignore, %d bytes\n", received);
+            printf("ignore, %lu bytes\n", received);
         }
     }
 }
 
+int initial_size()
+{
+    struct sockaddr_in sender;
+    socklen_t sender_size = SOCK_SIZE;
+    size_t received;
+    char buff[BUFF_SIZE];
+
+    while (1)
+    {
+        received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
+        if (received > 0)
+        {
+            nip = sender.sin_addr.s_addr;
+            ip = ntohl(nip);
+            decode_jpeg_init(buff, &received);
+            printf("Initial size %dX%d\n", cinfo.image_width, cinfo.image_height);
+            break;
+        }
+    }
+    return 1;
+}
+
 int main(void)
 {
-
+    char str[100];
     XEvent e;
     pthread_t thread_id;
     uint16_t port = 1234;
-    sender = malloc(sizeof(struct sockaddr));
+    XImage *ximage;
+    Display *display;
+    Screen *screen;
+    Window window;
+    int screen_num;
 
     display = XOpenDisplay(NULL);
-
     if (display == NULL)
     {
         fprintf(stderr, "Cannot open display\n");
         exit(1);
     }
-    screen = DefaultScreen(display);
-    window = XCreateSimpleWindow(display, RootWindow(display, screen), 0, 0, 360, 640, 0,
-                                 WhitePixel(display, screen), WhitePixel(display, screen));
+
+    if (!setup_connection(&port))
+        return 1;
+    initial_size();
+
+    screen_num = DefaultScreen(display);
+    screen = ScreenOfDisplay(display, screen_num);
+    window = XCreateSimpleWindow(display, screen->root,
+                                 100,
+                                 100,
+                                 cinfo.image_width,
+                                 cinfo.image_height,
+                                 0,
+                                 screen->white_pixel,
+                                 screen->white_pixel);
     XSelectInput(display, window, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | Button1MotionMask);
     XMapWindow(display, window);
 
-    pthread_create(&thread_id, NULL, (void *)&receiver_thread, &port);
+    ximage = XCreateImage(screen->display, screen->root_visual, screen->root_depth, ZPixmap, 0,
+                          xdata, cinfo.image_width, cinfo.image_height, 32, 0);
+
+    pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 
     while (1)
     {
@@ -114,9 +160,11 @@ int main(void)
         {
         // Resize
         case Expose:
-            pthread_mutex_lock(&mutex1);
-            draw_state();
-            pthread_mutex_unlock(&mutex1);
+            // pthread_mutex_lock(&mutex1);
+            sprintf(str, "Connected: %d.%d.%d.%d", ip >> 24, ip >> 16, ip >> 8, ip);
+            XStoreName(display, window, str);
+            XPutImage(display, window, DefaultGC(display, 0), ximage, 0, 0, 0, 0, cinfo.output_width, cinfo.output_height);
+            // pthread_mutex_unlock(&mutex1);
             break;
         // Keyboard key
         case KeyPress:
