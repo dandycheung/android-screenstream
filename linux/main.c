@@ -56,10 +56,10 @@ static void receiver_thread(Window *window)
         fprintf(stderr, "Cannot open display in thread\n");
         exit(1);
     }
-    // XEvent exppp;
-    // memset(&exppp, 0, sizeof(exppp));
-    // exppp.type = Expose;
-    // exppp.xexpose.window = window;
+    XEvent exppp;
+    memset(&exppp, 0, sizeof(exppp));
+    exppp.type = Expose;
+    exppp.xexpose.window = *window;
     while (1)
     {
         sender_size = SOCK_SIZE;
@@ -72,15 +72,15 @@ static void receiver_thread(Window *window)
                 continue;
                 // nip = sender->sin_addr.s_addr;
                 // frame_received = 0;
-                // XSendEvent(display, window, False, ExposureMask, &exppp);
-                //XFlush(display);
             }
             frame_received++;
             if (!decode_jpeg_run(buff, received))
             {
                 fprintf(stderr, "Fail decode jpeg\n");
             }
-            printf("%lu: %lu\n", frame_received, received);
+            XSendEvent(display, *window, False, ExposureMask, &exppp);
+            XFlush(display);
+            //printf("%lu: %lu\n", frame_received, received);
         }
         else
         {
