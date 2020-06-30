@@ -29,7 +29,6 @@ static int setup_connection(uint16_t *port)
         return 0;
     }
 
-    memset(&addr, 0, SOCK_SIZE);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(*port);
@@ -47,9 +46,9 @@ static int setup_connection(uint16_t *port)
 static void receiver_thread(Window *window)
 {
     socklen_t sender_size;
-    size_t received;
+    ssize_t received;
     Display *display = XOpenDisplay(NULL);
-    char buff[BUFF_SIZE];
+    unsigned char *buff = malloc(BUFF_SIZE);
     struct sockaddr_in *sender = calloc(SOCK_SIZE, 1);
 
     if (display == NULL)
@@ -77,7 +76,7 @@ static void receiver_thread(Window *window)
                 //XFlush(display);
             }
             frame_received++;
-            if (!decode_jpeg_run(buff, &received))
+            if (!decode_jpeg_run(buff, received))
             {
                 fprintf(stderr, "Fail decode jpeg\n");
             }
@@ -93,22 +92,26 @@ static void receiver_thread(Window *window)
 int initial_size()
 {
     struct sockaddr_in sender;
-    socklen_t sender_size = SOCK_SIZE;
-    size_t received;
-    char buff[BUFF_SIZE];
+    socklen_t sender_size;
+    ssize_t received;
+    unsigned char *buff = malloc(BUFF_SIZE);
 
     while (1)
     {
+        sender_size = SOCK_SIZE;
+        printf("Waiting first frame.. ");
         received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
+        printf("%lu\n", received);
         if (received > 0)
         {
             nip = sender.sin_addr.s_addr;
             ip = ntohl(nip);
-            decode_jpeg_init(buff, &received);
+            decode_jpeg_init(buff, received);
             printf("Initial size %dX%d\n", cinfo.image_width, cinfo.image_height);
             break;
         }
     }
+    free(buff);
     return 1;
 }
 
@@ -160,11 +163,11 @@ int main(void)
         {
         // Resize
         case Expose:
-            // pthread_mutex_lock(&mutex1);
+            pthread_mutex_lock(&mutex1);
             sprintf(str, "Connected: %d.%d.%d.%d", ip >> 24, ip >> 16, ip >> 8, ip);
             XStoreName(display, window, str);
             XPutImage(display, window, DefaultGC(display, 0), ximage, 0, 0, 0, 0, cinfo.output_width, cinfo.output_height);
-            // pthread_mutex_unlock(&mutex1);
+            pthread_mutex_unlock(&mutex1);
             break;
         // Keyboard key
         case KeyPress:
