@@ -30,7 +30,7 @@ int decode_jpeg_decompress()
         jpeg_finish_decompress(&cinfo);
         return 0;
     }
-    printf("jpeg decompress %p %d\n", xdata, cinfo.output_scanline);
+    //printf("jpeg decompress %p %d\n", xdata, cinfo.output_scanline);
     /* Step 6: while (scan lines remain to be read) */
     while (cinfo.output_scanline < cinfo.output_height)
     {
