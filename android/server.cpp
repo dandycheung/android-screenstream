@@ -38,7 +38,7 @@ static void handle_connection(int fd)
     ProcessState::self()->startThreadPool();
     void const *base = 0;
     SkDynamicMemoryWStream stream;
-    size_t size = 0;
+    ssize_t size = 0;
     ScreenshotClient screenshot;
     SkBitmap b;
     SkData *streamData;

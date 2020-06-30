@@ -1,9 +1,11 @@
 ifndef ANDROID_SDK_ROOT
-	$(error "ANDROID_SDK_ROOT not set")
+$(error "ANDROID_SDK_ROOT not set")
 endif
 ifndef ANDROID_NDK_HOME
 ANDROID_NDK_HOME=$(ANDROID_SDK_ROOT)/ndk
 endif
+export ROOT_PATH := $(dir $(PWD))
+export MODULE_NAME := screenstream
 
 PROJECT_PATH := $(PWD)
 BUILD_PATH := $(PWD)/build
@@ -11,7 +13,6 @@ NDK_OUT := $(BUILD_PATH)
 NDK_LIBS_OUT := $(BUILD_PATH)
 APP_BUILD_SCRIPT  := $(PWD)/Android.mk
 APP_ABI := armeabi-v7a
-LOCAL_MODULE:= screenstream
 
 ANDROID_ARGS := \
 	PROJECT_PATH=$(PROJECT_PATH) \
@@ -27,8 +28,8 @@ ANDROID_BUILD := @make  --no-print-dir -f $(ANDROID_NDK_HOME)/build/core/build-l
 UNLOCK_SCREEN = input keyevent 26 && input swipe 360 320 360 900 100
 
 build:
-ifeq (,$(wildcard include/frameworks))
-	make -C include
+ifeq (,$(wildcard $(ROOT_PATH)/include/frameworks))
+	make -C $(ROOT_PATH)/include
 endif
 	$(ANDROID_BUILD)
 
@@ -37,19 +38,11 @@ clean:
 	@rm -rf $(BUILD_PATH)/* 2>/dev/null
 
 exec: build
-	@adb push $(NDK_OUT)/$(APP_ABI)/$(LOCAL_MODULE) /data/local/tmp/ > /dev/null
+	@adb push $(NDK_OUT)/$(APP_ABI)/$(MODULE_NAME) /data/local/tmp/ > /dev/null
 	@adb shell "$(UNLOCK_SCREEN) && \
 		cd /data/local/tmp/ && \
-		busybox chmod +x $(LOCAL_MODULE) && \
-		(pidof $(LOCAL_MODULE) && killall $(LOCAL_MODULE) || true ) && \
-		./$(LOCAL_MODULE) 192.168.1.10 &"
-
-libs:
-	$(ANDROID_NDK_HOME)/ndk-build \
-	NDK_PROJECT_PATH=$(PWD)/libs \
-	APP_BUILD_SCRIPT=$(PWD)/libs/Android.mk \
-	APP_ALLOW_MISSING_DEPS=true \
-	APP_ABI=$(APP_ABI) \
-	APP_PLATFORM=android-19
+		busybox chmod +x $(MODULE_NAME) && \
+		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
+		./$(MODULE_NAME) 192.168.1.10 &" &
 
 .PHONY: build clean exec libs
