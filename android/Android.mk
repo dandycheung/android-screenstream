@@ -1,10 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
 
-ifndef ROOT_PATH
-$(error ROOT_PATH undefined)
-endif
-
-PREBUILT=$(ROOT_PATH)/include/prebuilt-armeabi-v7a/
+PREBUILT=$(LOCAL_PATH)/include/prebuilt-armeabi-v7a/
 
 include $(CLEAR_VARS)
 
@@ -66,12 +62,12 @@ LOCAL_SHARED_LIBRARIES := \
     libui \
     libgui
 LOCAL_C_INCLUDES += \
- 	$(ROOT_PATH)/include/system/core/include \
-	$(ROOT_PATH)/include/frameworks/native/include \
-	$(ROOT_PATH)/include/hardware/libhardware/include \
-	$(ROOT_PATH)/include/external/skia/include/core \
-	$(ROOT_PATH)/include/external/skia/include/effects \
-	$(ROOT_PATH)/include/external/skia/include/images \
-	$(ROOT_PATH)/include/external/skia/src/ports \
-	$(ROOT_PATH)/include/external/skia/include/utils
+ 	$(LOCAL_PATH)/include/system/core/include \
+	$(LOCAL_PATH)/include/frameworks/native/include \
+	$(LOCAL_PATH)/include/hardware/libhardware/include \
+	$(LOCAL_PATH)/include/external/skia/include/core \
+	$(LOCAL_PATH)/include/external/skia/include/effects \
+	$(LOCAL_PATH)/include/external/skia/include/images \
+	$(LOCAL_PATH)/include/external/skia/src/ports \
+	$(LOCAL_PATH)/include/external/skia/include/utils
 include $(BUILD_EXECUTABLE)

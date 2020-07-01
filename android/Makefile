@@ -4,7 +4,6 @@ endif
 ifndef ANDROID_NDK_HOME
 ANDROID_NDK_HOME=$(ANDROID_SDK_ROOT)/ndk
 endif
-export ROOT_PATH := $(dir $(PWD))
 export MODULE_NAME := screenstream
 
 PROJECT_PATH := $(PWD)
@@ -28,8 +27,8 @@ ANDROID_BUILD := @make  --no-print-dir -f $(ANDROID_NDK_HOME)/build/core/build-l
 UNLOCK_SCREEN = input keyevent KEYCODE_POWER
 
 build:
-ifeq (,$(wildcard $(ROOT_PATH)/include/frameworks))
-	make -C $(ROOT_PATH)/include
+ifeq (,$(wildcard include/frameworks))
+	make -C include
 endif
 	$(ANDROID_BUILD)
 
@@ -46,6 +45,6 @@ exec: build
 		./$(MODULE_NAME) 192.168.1.10 2> /dev/null"
 
 watch:
-	nodemon -e .c,.cpp,.h -x "make exec || false"
+	nodemon -V -i build/ -i include/ -e c,cpp,h -x "make exec || false"
 
 .PHONY: build clean exec

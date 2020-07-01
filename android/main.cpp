@@ -14,6 +14,8 @@
 #include <SkBitmap.h>
 #include <SkData.h>
 #include <SkStream.h>
+#include <linux/input.h>
+
 using namespace android;
 
 static SkBitmap::Config flinger2skia(PixelFormat f)
