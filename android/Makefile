@@ -25,7 +25,7 @@ ANDROID_ARGS := \
 	NDK_PROJECT_PATH=null
 
 ANDROID_BUILD := @make  --no-print-dir -f $(ANDROID_NDK_HOME)/build/core/build-local.mk $(ANDROID_ARGS)
-UNLOCK_SCREEN = input keyevent 26 && input swipe 360 320 360 900 100
+UNLOCK_SCREEN = input keyevent KEYCODE_POWER
 
 build:
 ifeq (,$(wildcard $(ROOT_PATH)/include/frameworks))
@@ -39,10 +39,13 @@ clean:
 
 exec: build
 	@adb push $(NDK_OUT)/$(APP_ABI)/$(MODULE_NAME) /data/local/tmp/ > /dev/null
-	@adb shell "$(UNLOCK_SCREEN) && \
+	adb shell "$(UNLOCK_SCREEN) 2> /dev/null && \
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
-		./$(MODULE_NAME) 192.168.1.10"
+		./$(MODULE_NAME) 192.168.1.10 2> /dev/null"
 
-.PHONY: build clean exec libs
+watch:
+	nodemon -e .c,.cpp,.h -x "make exec || false"
+
+.PHONY: build clean exec
