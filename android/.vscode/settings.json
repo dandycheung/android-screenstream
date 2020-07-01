@@ -4,6 +4,7 @@
         "build/": true
     },
     "files.associations": {
-        "random": "c"
+        "random": "c",
+        "cstdio": "cpp"
     }
 }
