@@ -5,6 +5,7 @@
     },
     "files.associations": {
         "random": "c",
-        "cstdio": "cpp"
+        "cstdio": "cpp",
+        "ios": "cpp"
     }
 }

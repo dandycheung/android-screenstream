@@ -49,6 +49,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE = $(MODULE_NAME)
 LOCAL_SRC_FILES := \
 	main.cpp \
+	input.cpp \
 	server.cpp
 
 LOCAL_CFLAGS += -Wno-multichar -DHAVE_SYS_UIO_H

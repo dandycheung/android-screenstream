@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,21 +8,16 @@
 #include <binder/ProcessState.h>
 #include <gui/SurfaceComposerClient.h>
 #include <gui/ISurfaceComposer.h>
+#include <binder/IServiceManager.h>
 #include <ui/PixelFormat.h>
 #include <ui/DisplayInfo.h>
 #include <SkImageEncoder.h>
 #include <SkBitmap.h>
 #include <SkData.h>
 #include <SkStream.h>
-#include <linux/input.h>
-#include <linux/uinput.h>
-
-#define DIE(str, args...)             \
-    do                                \
-    {                                 \
-        fprintf(stderr, "%s\n", str); \
-        exit(EXIT_FAILURE);           \
-    } while (0)
+#include <linux/input-event-codes.h>
+#include "main.h"
+#include "input.h"
 
 using namespace android;
 
@@ -38,9 +32,17 @@ static SkBitmap::Config flinger2skia(PixelFormat f)
     }
 }
 
-int input_setup()
-{
-    
+
+int is_screen_locked(){
+    Vector<String16> args;
+    sp<IServiceManager> sm = defaultServiceManager();
+    sp<IBinder> service = sm->checkService(String16("power"));
+    int err = service->dump(STDOUT_FILENO, args);
+    if (err != 0)
+        printf("error: get power service");
+
+    return 0;
+
 }
 
 int main(int argc, char const *argv[])
@@ -63,13 +65,14 @@ int main(int argc, char const *argv[])
     if (argc == 1)
         DIE("no IP target");
 
-    input_setup();
-
     targetIP = inet_addr(argv[1]);
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd == -1)
         DIE("Fail creating socket");
+
+    input_setup();
+    input_press(KEY_F17);
 
     memset(&target, 0, addr_size);
     target.sin_family = AF_INET;
