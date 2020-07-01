@@ -42,7 +42,7 @@ exec: build
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
-		./$(MODULE_NAME) 192.168.1.10 2> /dev/null"
+		./$(MODULE_NAME) 192.168.1.10"
 
 watch:
 	nodemon -V -i build/ -i include/ -e c,cpp,h -x "make exec || false"
