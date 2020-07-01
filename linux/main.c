@@ -143,6 +143,7 @@ int main(void)
     Display *display;
     Screen *screen;
     Window window;
+    XSizeHints w_hints;
     int screen_num;
     struct touch_point touch_stack[TOUCH_STACK_SIZE + 1];
     int touch_index = -1;
@@ -158,21 +159,25 @@ int main(void)
         return 1;
     initial_size();
 
-
     screen_num = DefaultScreen(display);
     screen = ScreenOfDisplay(display, screen_num);
+    w_hints.flags = PPosition;
+    w_hints.x = 1200 - wSize.w;
+    w_hints.y = 50;
+
+    printf("window screen: %d %s %d\n", screen->width, DisplayString(display), ScreenCount(display));
+
     window = XCreateSimpleWindow(display, screen->root,
-                                 100,
-                                 100,
+                                 w_hints.x,
+                                 w_hints.y,
                                  wSize.w,
                                  wSize.h,
                                  0,
                                  screen->white_pixel,
                                  screen->white_pixel);
+    XSetNormalHints(display, window, &w_hints);
     XSelectInput(display, window, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | Button1MotionMask);
     XMapWindow(display, window);
-
-    //printf("window screen: %d %s %d\n", screen_num, display->display_name, display->nscreen);
 
     ximage = XCreateImage(screen->display, screen->root_visual, screen->root_depth, ZPixmap, 0,
                           xdata, wSize.w, wSize.h, 32, 0);
