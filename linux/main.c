@@ -12,11 +12,24 @@
 #define BUFF_SIZE 102400
 // sizeof(struct sockaddr_in)
 #define SOCK_SIZE 16U
+#define TOUCH_STACK_SIZE 100U
 
-size_t frame_received = 0UL;
-int fd;
-uint32_t nip, ip;
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+struct window_size
+{
+    uint16_t w, h;
+};
+
+struct touch_point
+{
+    // convert to percentage
+    uint16_t x, y;
+};
+
+static struct window_size wSize;
+static size_t frame_received = 0UL;
+static int fd;
+static uint32_t nip, ip;
+static pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 static int setup_connection(uint16_t *port)
 {
@@ -56,10 +69,12 @@ static void receiver_thread(Window *window)
         fprintf(stderr, "Cannot open display in thread\n");
         exit(1);
     }
+
     XEvent exppp;
     memset(&exppp, 0, sizeof(exppp));
     exppp.type = Expose;
     exppp.xexpose.window = *window;
+
     while (1)
     {
         sender_size = SOCK_SIZE;
@@ -94,7 +109,7 @@ int initial_size()
     struct sockaddr_in sender;
     socklen_t sender_size;
     ssize_t received;
-    unsigned char *buff = malloc(BUFF_SIZE);
+    unsigned char buff[BUFF_SIZE];
 
     while (1)
     {
@@ -102,16 +117,19 @@ int initial_size()
         printf("Waiting first frame.. ");
         received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
         printf("%lu\n", received);
+
         if (received > 0)
         {
             nip = sender.sin_addr.s_addr;
             ip = ntohl(nip);
             decode_jpeg_init(buff, received);
-            printf("Initial size %dX%d\n", cinfo.image_width, cinfo.image_height);
+            wSize.w = cinfo.image_width;
+            wSize.h = cinfo.image_height;
+            printf("Initial size %ux%u %d bytes\n", wSize.w, wSize.h, received);
             break;
         }
     }
-    free(buff);
+
     return 1;
 }
 
@@ -126,6 +144,8 @@ int main(void)
     Screen *screen;
     Window window;
     int screen_num;
+    struct touch_point touch_stack[TOUCH_STACK_SIZE + 1];
+    int touch_index = -1;
 
     display = XOpenDisplay(NULL);
     if (display == NULL)
@@ -138,21 +158,24 @@ int main(void)
         return 1;
     initial_size();
 
+
     screen_num = DefaultScreen(display);
     screen = ScreenOfDisplay(display, screen_num);
     window = XCreateSimpleWindow(display, screen->root,
                                  100,
                                  100,
-                                 cinfo.image_width,
-                                 cinfo.image_height,
+                                 wSize.w,
+                                 wSize.h,
                                  0,
                                  screen->white_pixel,
                                  screen->white_pixel);
     XSelectInput(display, window, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | Button1MotionMask);
     XMapWindow(display, window);
 
+    //printf("window screen: %d %s %d\n", screen_num, display->display_name, display->nscreen);
+
     ximage = XCreateImage(screen->display, screen->root_visual, screen->root_depth, ZPixmap, 0,
-                          xdata, cinfo.image_width, cinfo.image_height, 32, 0);
+                          xdata, wSize.w, wSize.h, 32, 0);
 
     pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 
