@@ -32,8 +32,8 @@ static SkBitmap::Config flinger2skia(PixelFormat f)
     }
 }
 
-
-int is_screen_locked(){
+int is_screen_locked()
+{
     Vector<String16> args;
     sp<IServiceManager> sm = defaultServiceManager();
     sp<IBinder> service = sm->checkService(String16("power"));
@@ -42,7 +42,6 @@ int is_screen_locked(){
         printf("error: get power service");
 
     return 0;
-
 }
 
 int main(int argc, char const *argv[])
@@ -100,8 +99,9 @@ int main(int argc, char const *argv[])
     else
         DIE("Fail getting screenshot\n");
 
+    // is not required and will always ok, just to store the target address
+    connect(fd, (struct sockaddr *)&target, addr_size);
     printf("Sending to %s, scalled screen %dx%d\n", inet_ntoa(target.sin_addr), scalled_width, scalled_height);
-    size = 16;
 
     while (1)
     {
@@ -111,7 +111,9 @@ int main(int argc, char const *argv[])
             bmp.setPixels((void *)screenshot.getPixels());
             SkImageEncoder::EncodeStream(&stream, bmp, SkImageEncoder::kJPEG_Type, 70);
             streamData = stream.copyToData();
-            sendto(fd, streamData->data(), streamData->size(), 0, (struct sockaddr *)&target, addr_size);
+            //sendto(fd, streamData->data(), streamData->size(), 0, NULL, 0);
+            send(fd, streamData->data(), streamData->size(), 0);
+            //write(fd, streamData->data(), streamData->size());
             streamData->unref();
             stream.reset();
         }
