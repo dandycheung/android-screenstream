@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,6 +16,14 @@
 #include <SkData.h>
 #include <SkStream.h>
 #include <linux/input.h>
+#include <linux/uinput.h>
+
+#define DIE(str, args...)             \
+    do                                \
+    {                                 \
+        fprintf(stderr, "%s\n", str); \
+        exit(EXIT_FAILURE);           \
+    } while (0)
 
 using namespace android;
 
@@ -27,6 +36,11 @@ static SkBitmap::Config flinger2skia(PixelFormat f)
     default:
         return SkBitmap::kARGB_8888_Config;
     }
+}
+
+int input_setup()
+{
+    
 }
 
 int main(int argc, char const *argv[])
@@ -47,19 +61,15 @@ int main(int argc, char const *argv[])
     uint32_t scalled_width, scalled_height, format, stride;
 
     if (argc == 1)
-    {
-        printf("no IP target\n");
-        return 1;
-    }
+        DIE("no IP target");
+
+    input_setup();
 
     targetIP = inet_addr(argv[1]);
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd == -1)
-    {
-        fprintf(stderr, "Fail creating socket\n");
-        return 1;
-    }
+        DIE("Fail creating socket");
 
     memset(&target, 0, addr_size);
     target.sin_family = AF_INET;
@@ -70,10 +80,7 @@ int main(int argc, char const *argv[])
     display = SurfaceComposerClient::getBuiltInDisplay(ISurfaceComposer::eDisplayIdMain);
 
     if (SurfaceComposerClient::getDisplayInfo(display, &mainDpyInfo) != NO_ERROR)
-    {
-        fprintf(stderr, "ERROR: unable to get display characteristics\n");
-        return 1;
-    }
+        DIE("ERROR: unable to get display characteristics");
 
     scalled_width = mainDpyInfo.w / 2;
     scalled_height = mainDpyInfo.h / 2;
@@ -88,10 +95,7 @@ int main(int argc, char const *argv[])
         printf("Screen format %d: stride %d, scalled %dx%dx%d\n", format, stride, scalled_width, scalled_height, bpp);
     }
     else
-    {
-        printf("Fail getting screenshot\n");
-        return 1;
-    }
+        DIE("Fail getting screenshot\n");
 
     printf("Sending to %s, scalled screen %dx%d\n", inet_ntoa(target.sin_addr), scalled_width, scalled_height);
     size = 16;
@@ -112,7 +116,6 @@ int main(int argc, char const *argv[])
         {
             fprintf(stderr, "Error capturing screen\n");
         }
-
         usleep(100);
     }
 
