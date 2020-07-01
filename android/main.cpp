@@ -1,3 +1,4 @@
+#define HAVE_ENDIAN_H 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@
 #include "input.h"
 
 using namespace android;
-
+int fd;
 static SkBitmap::Config flinger2skia(PixelFormat f)
 {
     switch (f)
@@ -51,7 +52,6 @@ int main(int argc, char const *argv[])
     struct sockaddr_in target;
     ssize_t size, bpp;
     socklen_t addr_size = sizeof(struct sockaddr_in);
-    int fd;
     SkDynamicMemoryWStream stream;
     ScreenshotClient screenshot;
     SkBitmap bmp;
@@ -69,14 +69,16 @@ int main(int argc, char const *argv[])
 
     if (fd == -1)
         DIE("Fail creating socket");
-
-    input_setup();
-    input_press(KEY_F17);
-
+    // is not required and will always ok, just to store the target address
     memset(&target, 0, addr_size);
     target.sin_family = AF_INET;
     target.sin_addr.s_addr = targetIP;
     target.sin_port = htons(port);
+    // int flags = fcntl(fd, F_GETFL, 0);
+    // fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    //connect(fd, (struct sockaddr *)&target, addr_size);
+    input_setup(port);
+    input_press(KEY_F17);
 
     ProcessState::self()->startThreadPool();
     display = SurfaceComposerClient::getBuiltInDisplay(ISurfaceComposer::eDisplayIdMain);
@@ -99,8 +101,6 @@ int main(int argc, char const *argv[])
     else
         DIE("Fail getting screenshot\n");
 
-    // is not required and will always ok, just to store the target address
-    connect(fd, (struct sockaddr *)&target, addr_size);
     printf("Sending to %s, scalled screen %dx%d\n", inet_ntoa(target.sin_addr), scalled_width, scalled_height);
 
     while (1)
@@ -111,9 +111,9 @@ int main(int argc, char const *argv[])
             bmp.setPixels((void *)screenshot.getPixels());
             SkImageEncoder::EncodeStream(&stream, bmp, SkImageEncoder::kJPEG_Type, 70);
             streamData = stream.copyToData();
-            //sendto(fd, streamData->data(), streamData->size(), 0, NULL, 0);
-            send(fd, streamData->data(), streamData->size(), 0);
-            //write(fd, streamData->data(), streamData->size());
+
+            sendto(fd, streamData->data(), streamData->size(), 0, (struct sockaddr *)&target, __SOCK_SIZE__);
+            //send(fd, streamData->data(), streamData->size(), 0);
             streamData->unref();
             stream.reset();
         }
@@ -121,7 +121,8 @@ int main(int argc, char const *argv[])
         {
             fprintf(stderr, "Error capturing screen\n");
         }
-        usleep(100);
+        //usleep(1000);
+        sleep(1);
     }
 
     return 0;
