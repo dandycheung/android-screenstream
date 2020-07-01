@@ -1,9 +1,0 @@
-{
-    "files.watcherExclude": {
-        "include/": true,
-        "build/": true
-    },
-    "files.associations": {
-        "random": "c"
-    }
-}
