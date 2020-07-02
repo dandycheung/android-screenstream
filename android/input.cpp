@@ -75,7 +75,7 @@ static int input_setup_uinput()
     ioctl(fd_input, UI_SET_KEYBIT, BTN_TOUCH);
     ioctl(fd_input, UI_SET_KEYBIT, KEY_F17);
 
-    for (i = KEY_ESC; i < KEY_MENU; i++)
+    for (i = KEY_ESC; i < KEY_MICMUTE; i++)
     {
         ioctl(fd_input, UI_SET_KEYBIT, i);
     }

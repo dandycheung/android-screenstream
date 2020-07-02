@@ -8,44 +8,28 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <X11/Xlib.h>
-#include <X11/keysymdef.h>
 #include <X11/extensions/shape.h>
 #include <linux/input.h>
-#include <linux/input-event-codes.h>
 #include <shared-config.h>
 #ifdef INPUT_DEBUG
 #include <input-debug.h>
 #endif
 
 #include "decode.h"
+#include "keycodes.h"
 
-#define DIE(str, args...)             \
-    do                                \
-    {                                 \
-        fprintf(stderr, "%s\n", str); \
-        exit(1);                      \
-    } while (0)
 
 #define BTN_STATE_UP 0
 #define BTN_STATE_DOWN 1
 #define BTN_STATE_REPEAT 2
 #define BUFF_SIZE 102400
-// sizeof(struct sockaddr_in)
-#define __SOCK_SIZE__ 16U
-#define TOUCH_STACK_SIZE 100U
 
-struct window_size
+
+struct _wSize
 {
     uint16_t w, h;
 };
-
-struct touch_point
-{
-    // convert to percentage
-    uint16_t x, y;
-};
-
-static struct window_size wSize;
+static struct _wSize wSize;
 static int fd;
 static pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 struct input_event *event_key, *event_sync, *event_abs;
@@ -97,7 +81,7 @@ static void receiver_thread(Window *window)
     while (1)
     {
         sender_size = __SOCK_SIZE__;
-        received = recvfrom(fd, &buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
+        received = recvfrom(fd, (unsigned char *)&buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
         if (received > 0)
         {
             if (device_addr.sin_addr.s_addr != sender.sin_addr.s_addr ||
@@ -153,7 +137,7 @@ int initial_size()
     return 1;
 }
 
-void setup_input()
+void setup_input(Display *display)
 {
     event_size = sizeof(struct input_event);
     event_key = (struct input_event *)calloc(event_size, 1);
@@ -203,20 +187,29 @@ static int map_mouse_button(int btn)
 
 void send_touch_position(int32_t x, int32_t y)
 {
-    event_abs->code = ABS_MT_TOUCH_MAJOR;
-    event_abs->value = 0x2a;
-    send_input(event_abs);
+    // event_abs->code = ABS_MT_TOUCH_MAJOR;
+    // event_abs->value = 0x2a;
+    // send_input(event_abs);
     // event_abs->code = ABS_MT_TRACKING_ID;
     // event_abs->value = 0;
     // send_input(event_abs);
-    event_abs->code = ABS_MT_POSITION_X;
+    // event_abs->code = ABS_MT_POSITION_X;
+    // event_abs->value = x * 2;
+    // send_input(event_abs);
+    // event_abs->code = ABS_MT_POSITION_Y;
+    // event_abs->value = y * 2;
+    // send_input(event_abs);
+    // event_sync->code = SYN_MT_REPORT;
+    // send_input(event_sync);
+    event_abs->code = ABS_X;
     event_abs->value = x * 2;
     send_input(event_abs);
-    event_abs->code = ABS_MT_POSITION_Y;
+    event_abs->code = ABS_Y;
     event_abs->value = y * 2;
     send_input(event_abs);
-    event_sync->code = SYN_MT_REPORT;
-    send_input(event_sync);
+    event_abs->code = ABS_Z;
+    event_abs->value = 0;
+    send_input(event_abs);
     event_sync->code = SYN_REPORT;
     send_input(event_sync);
 }
@@ -294,7 +287,6 @@ int main(void)
     uint16_t port = 1234;
     XImage *ximage;
     Display *display;
-    KeySym keysym;
     int btn;
 
     memset(&listen_addr, 0, __SOCK_SIZE__);
@@ -304,9 +296,9 @@ int main(void)
 
     initial_size();
 
-    setup_input();
-
     setup_window(&display, &ximage);
+
+    setup_input(display);
 
     send_keypress(KEY_F17);
 
@@ -330,16 +322,21 @@ int main(void)
         // Keyboard key
         case KeyRelease:
         case KeyPress:
-            keysym = XLookupKeysym((XKeyEvent *)&e, 0);
-            printf("KEY: %d  %lu %s %s\n", e.xkey.keycode, keysym, XKeysymToString(keysym), e.type == KeyPress ? "DOWN" : "UP");
-            event_key->type = EV_KEY | 0b1000000000000000;
-            event_key->code = keysym;
-            event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
-            send_input(event_key);
-            event_sync->code = SYN_REPORT;
-            send_input(event_sync);
-            // restore
-            event_key->type = EV_KEY;
+
+            if (e.xkey.keycode <= 0 || e.xkey.keycode > keycodes_len)
+            {
+                printf("Ignore keycode: %d\n", e.xkey.keycode);
+                continue;
+            }
+
+            if (keycodes[e.xkey.keycode] != 0)
+            {
+                event_key->code = keycodes[e.xkey.keycode];
+                event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
+                send_input(event_key);
+                event_sync->code = SYN_REPORT;
+                send_input(event_sync);
+            }
             break;
 
         // Mouse Button
