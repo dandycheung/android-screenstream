@@ -155,6 +155,7 @@ void setup_input()
     event_abs = (struct input_event *)calloc(event_size, 1);
     event_key->type = EV_KEY;
     event_abs->type = EV_ABS;
+    event_sync->type = EV_SYN;
 }
 
 static void send_input(struct input_event *e)
@@ -162,21 +163,21 @@ static void send_input(struct input_event *e)
     uint8_t buf[8];
 
     buf[0] = e->type >> 8;
-    buf[1] = e->type & 0xff;
+    buf[1] = e->type;
 
     buf[2] = e->code >> 8;
-    buf[3] = e->code & 0xff;
+    buf[3] = e->code;
 
     buf[4] = e->value >> 24;
     buf[5] = e->value >> 16;
     buf[6] = e->value >> 8;
-    buf[7] = e->value & 0xff;
-    printf("Event %d %d %d %db\n", e->type, e->code, e->value, 8);
-    for (int i = 0; i < 8; i++)
-    {
-        printf("%02x ", buf[i]);
-    }
-    printf("\n");
+    buf[7] = e->value;
+    printf("E: %04X %04X %08X\n", e->type, e->code, e->value, 8);
+    // for (int i = 0; i < 8; i++)
+    // {
+    //     printf("%02x ", buf[i]);
+    // }
+    // printf("\n");
     return sendto(fd, buf, 8, 0, &device_addr, __SOCK_SIZE__);
 }
 static int map_mouse_button(int btn)
@@ -198,7 +199,7 @@ static int map_mouse_button(int btn)
     }
 }
 
-void send_touch_position(int x, int y)
+void send_touch_position(int32_t x, int32_t y)
 {
     event_abs->code = ABS_MT_TOUCH_MAJOR;
     event_abs->value = 0x2a;
@@ -215,7 +216,23 @@ void send_touch_position(int x, int y)
     event_sync->code = SYN_MT_REPORT;
     send_input(event_sync);
 }
+void send_keypress(uint16_t key)
+{
 
+    event_key->code = key;
+    event_key->value = 1;
+    send_input(event_key);
+
+    event_sync->code = SYN_REPORT;
+    send_input(event_sync);
+
+    event_key->code = key;
+    event_key->value = 0;
+    send_input(event_key);
+
+    event_sync->code = SYN_REPORT;
+    send_input(event_sync);
+}
 void setup_window(Display **display, XImage **ximage)
 {
     char str[100];
@@ -280,6 +297,8 @@ int main(void)
     setup_input();
 
     setup_window(&display, &ximage);
+    //send_touch_position(0xff, 0xff);
+    send_keypress(KEY_F17);
 
     pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 

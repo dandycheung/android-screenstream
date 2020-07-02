@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
                 "/data/android/sdk/ndk-bundle/sysroot/usr/include",
                 "/data/android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include",
                 "${workspaceFolder}/include/system/core/include",

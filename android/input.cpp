@@ -9,6 +9,8 @@
 #include <arpa/inet.h>
 #include <linux/input.h>
 #include <linux/input-event-codes.h>
+#include <system/core/toolbox/getevent.h>
+
 #include "main.h"
 #include "input.h"
 
@@ -41,12 +43,12 @@ void *input_thread(void *)
             e.value |= buf[6] << 8;
             e.value |= buf[7];
 
-            printf("Event %d %d %d %db\n", e.type, e.code, e.value, received);
-            for (int i = 0; i < received; i++)
-            {
-                printf("%02x ", buf[i]);
-            }
-            printf("\n");
+            printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
+            // for (int i = 0; i < received; i++)
+            // {
+            //     printf("%02x ", buf[i]);
+            // }
+            // printf("\n");
             write(fd_input, &e, event_size);
         }
         else

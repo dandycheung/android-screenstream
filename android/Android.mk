@@ -70,5 +70,6 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/include/external/skia/include/effects \
 	$(LOCAL_PATH)/include/external/skia/include/images \
 	$(LOCAL_PATH)/include/external/skia/src/ports \
-	$(LOCAL_PATH)/include/external/skia/include/utils
+	$(LOCAL_PATH)/include/external/skia/include/utils \
+	$(LOCAL_PATH)/include
 include $(BUILD_EXECUTABLE)
