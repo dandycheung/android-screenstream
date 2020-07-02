@@ -1,3 +1,4 @@
+#define XK_XKB_KEYS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,9 +8,11 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <X11/Xlib.h>
+#include <X11/keysymdef.h>
 #include <X11/extensions/shape.h>
 #include <linux/input.h>
 #include <linux/input-event-codes.h>
+#include <shared-config.h>
 #ifdef INPUT_DEBUG
 #include <input-debug.h>
 #endif
@@ -163,7 +166,7 @@ void setup_input()
 
 static void send_input(struct input_event *e)
 {
-    uint8_t buf[8];
+    uint8_t buf[INPUT_BINARY_SIZE];
 
     buf[0] = e->type >> 8;
     buf[1] = e->type;
@@ -171,14 +174,13 @@ static void send_input(struct input_event *e)
     buf[2] = e->code >> 8;
     buf[3] = e->code;
 
-    buf[4] = e->value >> 24;
-    buf[5] = e->value >> 16;
-    buf[6] = e->value >> 8;
-    buf[7] = e->value;
+    // 2 byte is enough
+    buf[4] = e->value >> 8;
+    buf[5] = e->value;
 #ifdef INPUT_DEBUG
     print_event(e->type, e->code, e->value);
 #endif
-    return sendto(fd, buf, 8, 0, &device_addr, __SOCK_SIZE__);
+    return sendto(fd, buf, INPUT_BINARY_SIZE, 0, &device_addr, __SOCK_SIZE__);
 }
 static int map_mouse_button(int btn)
 {
@@ -270,6 +272,7 @@ void setup_window(Display **display, XImage **ximage)
         window,
         ExposureMask |
             KeyPressMask |
+            KeyReleaseMask |
             ButtonPressMask |
             ButtonReleaseMask |
             Button1MotionMask);
@@ -291,6 +294,7 @@ int main(void)
     uint16_t port = 1234;
     XImage *ximage;
     Display *display;
+    KeySym keysym;
     int input_fd, btn;
 
     // struct touch_point touch_stack[TOUCH_STACK_SIZE + 1];
@@ -323,24 +327,19 @@ int main(void)
             pthread_mutex_unlock(&mutex1);
             break;
         // Keyboard key
+        case KeyRelease:
         case KeyPress:
-            printf("KEY: %d\n", e.xkey.keycode);
-            // event_key->code = e.xkey.keycode;
-            // event_key->value = BTN_STATE_DOWN;
-            // send_input(event_key);
-            // event_sync->code = SYN_REPORT;
-            // send_input(event_sync);
-            // event_key->code = e.xkey.keycode;
-            // event_key->value = BTN_STATE_UP;
-            // send_input(event_key);
-            // event_sync->code = SYN_REPORT;
-            // send_input(event_sync);
+            keysym = XLookupKeysym(&e, 0);
+            printf("KEY: %d  %d %s %s\n", e.xkey.keycode, keysym, XKeysymToString(keysym), e.type == KeyPress ? "DOWN" : "UP");
+            event_key->code = keysym;
+            event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
+            send_input(event_key);
+            event_sync->code = SYN_REPORT;
+            send_input(event_sync);
             break;
+        // Mouse Button
         case ButtonPress:
-            // printf("BTN DOWN: %d %d %d\n", e.xbutton.button, e.xbutton.x, e.xbutton.y);
-            // break;
         case ButtonRelease:
-            //printf("BTN UP: %d %d %d\n", e.xbutton.button, e.xbutton.x, e.xbutton.y);
             btn = map_mouse_button(e.xbutton.button);
             if (btn < 0)
             {

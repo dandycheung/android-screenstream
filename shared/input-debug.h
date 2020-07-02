@@ -1,3 +1,4 @@
+#pragma once
 #include <linux/input.h>
 // From android/system/core/toolbox/getevent
 struct label
