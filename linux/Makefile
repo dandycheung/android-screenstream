@@ -10,5 +10,9 @@ watch:
 clean:
 	rm -f main *.o
 
+keycode-gen: keycode-gen.c keycode-gen.h
+	$(CC) -lX11 $(CFLAGS) -o $@ $<
+	./keycode-gen
+
 .PHONY: clean watch
 

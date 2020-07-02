@@ -17,7 +17,7 @@
 #include "main.h"
 #include "input.h"
 
-static int fd_input, udp_input, fd_uinput;
+static int fd_input, udp_input;
 static struct input_event *event_key, *event_sync;
 static uint8_t event_size;
 static pthread_t input_thread_id;
@@ -44,18 +44,8 @@ static void *input_thread(void *)
         e.value = buf[4] << 8;
         e.value |= buf[5];
 
-        // check is our virtual?
-        if (e.type & 0b1000000000000000)
-        {
-            // remove mask
-            printf("GOT KBD\n");
-            e.type ^= 0b1000000000000000;
-            write(fd_uinput, &e, event_size);
-        }
-        else
-        {
-            write(fd_input, &e, event_size);
-        }
+        write(fd_input, &e, event_size);
+
 #ifdef INPUT_DEBUG
         print_event(e.type, e.code, e.value);
 #endif
@@ -68,42 +58,49 @@ static int input_setup_uinput()
     int i;
     uinput_user_dev uidev;
 
-    fd_uinput = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-    if (fd_uinput < 0)
+    fd_input = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (fd_input < 0)
     {
         printf("can't open /dev/uinput");
         return 0;
     }
 
     // Keyboard
-    if (ioctl(fd_uinput, UI_SET_EVBIT, EV_KEY) < 0)
+    if (ioctl(fd_input, UI_SET_EVBIT, EV_KEY) < 0)
     {
         printf("Fail ioctl /dev/uinput");
         return 0;
     }
 
-    for (i = 0; i < 256; i++)
+    ioctl(fd_input, UI_SET_KEYBIT, BTN_TOUCH);
+    ioctl(fd_input, UI_SET_KEYBIT, KEY_F17);
+
+    for (i = KEY_ESC; i < KEY_MENU; i++)
     {
-        if (ioctl(fd_uinput, UI_SET_KEYBIT, i) < 0)
-        {
-            printf("Fail ioctl key /dev/uinput");
-            return 0;
-        }
+        ioctl(fd_input, UI_SET_KEYBIT, i);
     }
+
+    // Touch
+    ioctl(fd_input, UI_SET_EVBIT, EV_ABS);
+    ioctl(fd_input, UI_SET_ABSBIT, ABS_X);
+    ioctl(fd_input, UI_SET_ABSBIT, ABS_Y);
+    ioctl(fd_input, UI_SET_ABSBIT, ABS_Z);
+    ioctl(fd_input, UI_SET_ABSBIT, ABS_PRESSURE);
+
     memset(&uidev, 0, sizeof(uidev));
-    snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "Input Injector");
+    snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "screenstream");
     uidev.id.bustype = BUS_VIRTUAL;
     uidev.id.vendor = 0;
     uidev.id.product = 0;
     uidev.id.version = 0;
 
-    if (write(fd_uinput, &uidev, sizeof(uidev)) < 0)
+    if (write(fd_input, &uidev, sizeof(uidev)) < 0)
     {
         printf("error: write");
         return 0;
     }
 
-    if (ioctl(fd_uinput, UI_DEV_CREATE) < 0)
+    if (ioctl(fd_input, UI_DEV_CREATE) < 0)
     {
         printf("error: UI_DEV_CREATE");
         return 0;
@@ -120,15 +117,17 @@ void input_setup(uint16_t port)
     event_sync = (input_event *)calloc(event_size, 1);
     event_key->type = EV_KEY;
 
-    fd_input = open("/dev/input/event4", O_RDWR);
-    if (ioctl(fd_input, EVIOCGVERSION, &version))
-        DIE("open input");
-
     if (pthread_create(&input_thread_id, NULL, &input_thread, NULL) != 0)
         DIE("Fail starting input thread");
 
     if (!input_setup_uinput())
-        printf("\x1b[32m**/dev/uinput fail. kbd not work**\x1b[0m\n");
+    {
+        printf("\x1b[32m**/dev/uinput fail. kbd might not work**\x1b[0m\n");
+        printf("Fallback using /dev/input/event4");
+        fd_input = open("/dev/input/event4", O_RDWR);
+        if (ioctl(fd_input, EVIOCGVERSION, &version))
+            DIE("open input");
+    }
 
 #ifdef INPUT_DEBUG
     printf("\x1b[33m**input debug enabled**\x1b[0m\n");
