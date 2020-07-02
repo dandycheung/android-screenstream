@@ -53,8 +53,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE = $(MODULE_NAME)
 LOCAL_SRC_FILES := \
 	main.cpp \
-	input.cpp \
-	server.cpp
+	input.cpp
 
 LOCAL_CXXFLAGS += -Wno-multichar -DHAVE_SYS_UIO_H $(APPEND_CFLAGS)
 #LOCAL_CPPFLAGS += -DHAVE_SYS_UIO_H
