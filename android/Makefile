@@ -16,6 +16,7 @@ NDK_LIBS_OUT := $(BUILD_PATH)
 APP_BUILD_SCRIPT  := $(PROJECT_PATH)/Android.mk
 APP_ABI := armeabi-v7a
 
+
 ANDROID_ARGS := \
 	PROJECT_PATH=$(PROJECT_PATH) \
 	APP_BUILD_SCRIPT=$(APP_BUILD_SCRIPT) \
@@ -40,15 +41,18 @@ clean:
 	@rm -rf $(BUILD_PATH)/* 2>/dev/null
 
 exec: build
-	@adb push $(NDK_OUT)/$(APP_ABI)/$(MODULE_NAME) /data/local/tmp/ > /dev/null
+	@adb $(ADB_FLAGS) push $(NDK_OUT)/$(APP_ABI)/$(MODULE_NAME) /data/local/tmp/ > /dev/null
 	@echo ------------------------
-	@adb shell " \
+	@adb $(ADB_FLAGS) shell " \
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
 		./$(MODULE_NAME) 192.168.1.10"
 
 watch:
-	nodemon -V -i build/ -i include/ -e c,cpp,h -x "make APPEND_CFLAGS=-DINPUT_DEBUG=1 exec || false"
+	nodemon -V -i build/ -i include/ \
+		-e c,cpp,h \
+		-x "make 'ADB_FLAGS=$(ADB_FLAGS)' \
+			APPEND_CFLAGS=-DINPUT_DEBUG=1 exec || false"
 
 .PHONY: build clean exec
