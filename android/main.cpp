@@ -49,6 +49,8 @@ int main(int argc, char const *argv[])
 {
     uint32_t targetIP;
     uint16_t port = 1234U;
+    uint8_t fps = 20;
+    useconds_t delay;
     struct sockaddr_in target;
     ssize_t size, bpp;
     socklen_t addr_size = sizeof(struct sockaddr_in);
@@ -64,19 +66,23 @@ int main(int argc, char const *argv[])
     if (argc == 1)
         DIE("no IP target");
 
+
     targetIP = inet_addr(argv[1]);
+
+    delay = 1000000 / fps;
+
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd == -1)
         DIE("Fail creating socket");
-    // is not required and will always ok, just to store the target address
+
     memset(&target, 0, addr_size);
     target.sin_family = AF_INET;
     target.sin_addr.s_addr = targetIP;
     target.sin_port = htons(port);
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    //connect(fd, (struct sockaddr *)&target, addr_size);
+
     input_setup(port);
     input_press(KEY_F17);
 
@@ -121,7 +127,7 @@ int main(int argc, char const *argv[])
         {
             fprintf(stderr, "Error capturing screen\n");
         }
-        usleep(15000U);
+        usleep(delay);
     }
 
     return 0;
