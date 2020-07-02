@@ -187,9 +187,9 @@ static int map_mouse_button(int btn)
     case 1: // left
         return BTN_TOUCH;
     case 2: // midd
-        return KEY_MENU;
+        return KEY_F17;
     case 3: // right
-        return BTN_BACK;
+        return KEY_BACK;
     case 4: // scrl UP
         return KEY_SCROLLUP;
     case 5: // scrl DOWN
