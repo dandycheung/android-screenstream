@@ -9,8 +9,9 @@
 #include <arpa/inet.h>
 #include <linux/input.h>
 #include <linux/input-event-codes.h>
-#include <system/core/toolbox/getevent.h>
-
+#ifdef INPUT_DEBUG
+#include <input-debug.h>
+#endif
 #include "main.h"
 #include "input.h"
 
@@ -42,14 +43,17 @@ void *input_thread(void *)
             e.value |= buf[5] << 16;
             e.value |= buf[6] << 8;
             e.value |= buf[7];
-
-            printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
+            write(fd_input, &e, event_size);
+#ifdef INPUT_DEBUG
+            //printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
+            //printf("E: \x1b[31m%s \x1b[32m%04X \x1b[33m%08X\x1b[0m\n", get_label(ev_labels, e.type), e.code, e.value);
+            print_event(e.type, e.code, e.value);
             // for (int i = 0; i < received; i++)
             // {
             //     printf("%02x ", buf[i]);
             // }
             // printf("\n");
-            write(fd_input, &e, event_size);
+#endif
         }
         else
         {
@@ -79,6 +83,10 @@ void input_setup(uint16_t port)
 
     if (pthread_create(&input_thread_id, NULL, &input_thread, NULL) != 0)
         DIE("Fail starting input thread");
+
+#ifdef INPUT_DEBUG
+    printf("\x1b[33m**input debug enabled**\x1b[0m\n");
+#endif
 }
 
 /* Simulating keypress */

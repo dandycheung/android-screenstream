@@ -1,3 +1,7 @@
+ifndef ROOT_PATH
+$(error ROOT_PATH not defined, please build using GNU Makefile (make) command)
+endif
+
 LOCAL_PATH:= $(call my-dir)
 
 PREBUILT=$(LOCAL_PATH)/include/prebuilt-armeabi-v7a/
@@ -52,8 +56,8 @@ LOCAL_SRC_FILES := \
 	input.cpp \
 	server.cpp
 
-LOCAL_CFLAGS += -Wno-multichar -DHAVE_SYS_UIO_H
-LOCAL_CPPFLAGS += -DHAVE_SYS_UIO_H
+LOCAL_CXXFLAGS += -Wno-multichar -DHAVE_SYS_UIO_H $(APPEND_CFLAGS)
+#LOCAL_CPPFLAGS += -DHAVE_SYS_UIO_H
 #LOCAL_MODULE:= screenstream
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
@@ -71,5 +75,5 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/include/external/skia/include/images \
 	$(LOCAL_PATH)/include/external/skia/src/ports \
 	$(LOCAL_PATH)/include/external/skia/include/utils \
-	$(LOCAL_PATH)/include
+	$(ROOT_PATH)/shared
 include $(BUILD_EXECUTABLE)

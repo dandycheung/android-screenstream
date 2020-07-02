@@ -10,6 +10,9 @@
 #include <X11/extensions/shape.h>
 #include <linux/input.h>
 #include <linux/input-event-codes.h>
+#ifdef INPUT_DEBUG
+#include <input-debug.h>
+#endif
 
 #include "decode.h"
 
@@ -172,12 +175,16 @@ static void send_input(struct input_event *e)
     buf[5] = e->value >> 16;
     buf[6] = e->value >> 8;
     buf[7] = e->value;
-    printf("E: %04X %04X %08X\n", e->type, e->code, e->value, 8);
-    // for (int i = 0; i < 8; i++)
+#ifdef INPUT_DEBUG
+    //printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
+    //printf("E: \x1b[31m%s \x1b[32m%04X \x1b[33m%08X\x1b[0m\n", get_label(ev_labels, e.type), e.code, e.value);
+    print_event(e->type, e->code, e->value);
+    // for (int i = 0; i < received; i++)
     // {
     //     printf("%02x ", buf[i]);
     // }
     // printf("\n");
+#endif
     return sendto(fd, buf, 8, 0, &device_addr, __SOCK_SIZE__);
 }
 static int map_mouse_button(int btn)

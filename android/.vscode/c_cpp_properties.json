@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/include",
+                "${workspaceFolder}/../shared",
                 "/data/android/sdk/ndk-bundle/sysroot/usr/include",
                 "/data/android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include",
                 "${workspaceFolder}/include/system/core/include",
@@ -15,7 +15,7 @@
 	            "${workspaceFolder}/include/external/skia/src/ports",
 	            "${workspaceFolder}/include/external/skia/include/utils"
             ],
-            "defines": [],
+            "defines": ["INPUT_DEBUG=1"],
             "compilerPath": "/data/android/sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/clang",
             "cStandard": "c11",
             "cppStandard": "c++17",

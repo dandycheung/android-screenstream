@@ -1,16 +1,19 @@
 ifndef ANDROID_SDK_ROOT
 $(error "ANDROID_SDK_ROOT not set")
 endif
+
 ifndef ANDROID_NDK_HOME
 ANDROID_NDK_HOME=$(ANDROID_SDK_ROOT)/ndk
 endif
-export MODULE_NAME := screenstream
 
-PROJECT_PATH := $(PWD)
-BUILD_PATH := $(PWD)/build
+export MODULE_NAME := screenstream
+export PROJECT_PATH := $(PWD)
+export ROOT_PATH := $(dir $(PWD))
+
+BUILD_PATH := $(PROJECT_PATH)/build
 NDK_OUT := $(BUILD_PATH)
 NDK_LIBS_OUT := $(BUILD_PATH)
-APP_BUILD_SCRIPT  := $(PWD)/Android.mk
+APP_BUILD_SCRIPT  := $(PROJECT_PATH)/Android.mk
 APP_ABI := armeabi-v7a
 
 ANDROID_ARGS := \
@@ -46,6 +49,6 @@ exec: build
 		./$(MODULE_NAME) 192.168.1.10"
 
 watch:
-	nodemon -V -i build/ -i include/ -e c,cpp,h -x "make exec || false"
+	nodemon -V -i build/ -i include/ -e c,cpp,h -x "make APPEND_CFLAGS=-DINPUT_DEBUG=1 exec || false"
 
 .PHONY: build clean exec
