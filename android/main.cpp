@@ -17,6 +17,9 @@
 #include <SkData.h>
 #include <SkStream.h>
 #include <linux/input-event-codes.h>
+
+#include <shared-config.h>
+
 #include "main.h"
 #include "input.h"
 
