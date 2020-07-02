@@ -176,14 +176,7 @@ static void send_input(struct input_event *e)
     buf[6] = e->value >> 8;
     buf[7] = e->value;
 #ifdef INPUT_DEBUG
-    //printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
-    //printf("E: \x1b[31m%s \x1b[32m%04X \x1b[33m%08X\x1b[0m\n", get_label(ev_labels, e.type), e.code, e.value);
     print_event(e->type, e->code, e->value);
-    // for (int i = 0; i < received; i++)
-    // {
-    //     printf("%02x ", buf[i]);
-    // }
-    // printf("\n");
 #endif
     return sendto(fd, buf, 8, 0, &device_addr, __SOCK_SIZE__);
 }
@@ -210,17 +203,19 @@ void send_touch_position(int32_t x, int32_t y)
 {
     event_abs->code = ABS_MT_TOUCH_MAJOR;
     event_abs->value = 0x2a;
-    send_input(event_key);
+    send_input(event_abs);
     event_abs->code = ABS_MT_TRACKING_ID;
     event_abs->value = 0;
-    send_input(event_key);
+    send_input(event_abs);
     event_abs->code = ABS_MT_POSITION_X;
     event_abs->value = x * 2;
-    send_input(event_key);
+    send_input(event_abs);
     event_abs->code = ABS_MT_POSITION_Y;
     event_abs->value = y * 2;
-    send_input(event_key);
+    send_input(event_abs);
     event_sync->code = SYN_MT_REPORT;
+    send_input(event_sync);
+    event_sync->code = SYN_REPORT;
     send_input(event_sync);
 }
 void send_keypress(uint16_t key)
@@ -270,7 +265,14 @@ void setup_window(Display **display, XImage **ximage)
                                  screen->white_pixel);
 
     XSetNormalHints(*display, window, &w_hints);
-    XSelectInput(*display, window, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | Button1MotionMask);
+    XSelectInput(
+        *display,
+        window,
+        ExposureMask |
+            KeyPressMask |
+            ButtonPressMask |
+            ButtonReleaseMask |
+            Button1MotionMask);
 
     sprintf(str, "Connected: %s:%d\n", inet_ntoa(device_addr.sin_addr), ntohs(device_addr.sin_port));
     XStoreName(*display, window, str);
@@ -304,8 +306,8 @@ int main(void)
     setup_input();
 
     setup_window(&display, &ximage);
-    //send_touch_position(0xff, 0xff);
-    send_keypress(KEY_F17);
+    send_touch_position(0xff, 0xff);
+    //send_keypress(KEY_F17);
 
     pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 
@@ -323,16 +325,16 @@ int main(void)
         // Keyboard key
         case KeyPress:
             printf("KEY: %d\n", e.xkey.keycode);
-            event_key->code = e.xkey.keycode;
-            event_key->value = BTN_STATE_DOWN;
-            send_input(event_key);
-            event_sync->code = SYN_REPORT;
-            send_input(event_sync);
-            event_key->code = e.xkey.keycode;
-            event_key->value = BTN_STATE_UP;
-            send_input(event_key);
-            event_sync->code = SYN_REPORT;
-            send_input(event_sync);
+            // event_key->code = e.xkey.keycode;
+            // event_key->value = BTN_STATE_DOWN;
+            // send_input(event_key);
+            // event_sync->code = SYN_REPORT;
+            // send_input(event_sync);
+            // event_key->code = e.xkey.keycode;
+            // event_key->value = BTN_STATE_UP;
+            // send_input(event_key);
+            // event_sync->code = SYN_REPORT;
+            // send_input(event_sync);
             break;
         case ButtonPress:
             // printf("BTN DOWN: %d %d %d\n", e.xbutton.button, e.xbutton.x, e.xbutton.y);
@@ -345,18 +347,20 @@ int main(void)
                 printf("Unmapped button: %d\n", e.xbutton.button);
                 continue;
             }
+            printf("X-Press/Release: %s\n", e.type == ButtonPress ? "DOWN" : "UP");
             event_key->code = btn;
             event_key->value = e.type == ButtonPress ? BTN_STATE_DOWN : BTN_STATE_UP;
             send_input(event_key);
             if (btn == BTN_TOUCH)
             {
-                printf("TOUCH: %s\n", e.type == ButtonPress ? "DOWN" : "UP");
                 // Send location too
                 send_touch_position(e.xbutton.x, e.xbutton.y);
             }
-            event_sync->code = SYN_REPORT;
-            event_sync->value = 0;
-            send_input(event_sync);
+            else
+            {
+                event_sync->code = SYN_REPORT;
+                send_input(event_sync);
+            }
             break;
         case MotionNotify:
             if (e.xbutton.x < 0 || e.xbutton.y < 0 || e.xbutton.x > wSize.w || e.xbutton.y > wSize.h)
