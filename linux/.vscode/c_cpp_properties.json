@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/../shared"
             ],
-            "defines": [],
+            "defines": ["INPUT_DEBUG=1"],
             "compilerPath": "/usr/bin/clang-3.8",
             "cStandard": "c11",
             "cppStandard": "c++17",
