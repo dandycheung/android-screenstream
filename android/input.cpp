@@ -45,20 +45,13 @@ void *input_thread(void *)
             e.value |= buf[7];
             write(fd_input, &e, event_size);
 #ifdef INPUT_DEBUG
-            //printf("E: %04X %04X %08X\n", e.type, e.code, e.value);
-            //printf("E: \x1b[31m%s \x1b[32m%04X \x1b[33m%08X\x1b[0m\n", get_label(ev_labels, e.type), e.code, e.value);
             print_event(e.type, e.code, e.value);
-            // for (int i = 0; i < received; i++)
-            // {
-            //     printf("%02x ", buf[i]);
-            // }
-            // printf("\n");
 #endif
         }
-        else
-        {
-            printf("IGNORE %d bytes\n", received);
-        }
+        // else
+        // {
+        //     printf("IGNORE %d bytes\n", received);
+        // }
     }
 }
 
