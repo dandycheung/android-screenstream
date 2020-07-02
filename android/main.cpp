@@ -74,8 +74,8 @@ int main(int argc, char const *argv[])
     target.sin_family = AF_INET;
     target.sin_addr.s_addr = targetIP;
     target.sin_port = htons(port);
-    // int flags = fcntl(fd, F_GETFL, 0);
-    // fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
     //connect(fd, (struct sockaddr *)&target, addr_size);
     input_setup(port);
     input_press(KEY_F17);
@@ -121,8 +121,7 @@ int main(int argc, char const *argv[])
         {
             fprintf(stderr, "Error capturing screen\n");
         }
-        //usleep(1000);
-        sleep(1);
+        usleep(15000U);
     }
 
     return 0;
