@@ -8,8 +8,9 @@ Build for Android 4.4.2 on Debian Stretch. Require Android NDK.
 
 [x] send screen frame
 [x] make touchscreen work
+[ ] Reduce processor usage, HW rendering or optimize code
 [ ] Detect device sleep/screenlocked, dont send any frame
-[ ] Make keyboard typing work. using /dev/uinput or java app.
+[ ] Make keyboard typing work. using /dev/uinput or java app
 
 ## Linux Side
 
