@@ -332,11 +332,14 @@ int main(void)
         case KeyPress:
             keysym = XLookupKeysym((XKeyEvent *)&e, 0);
             printf("KEY: %d  %lu %s %s\n", e.xkey.keycode, keysym, XKeysymToString(keysym), e.type == KeyPress ? "DOWN" : "UP");
+            event_key->type = EV_KEY | 0b1000000000000000;
             event_key->code = keysym;
             event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
             send_input(event_key);
             event_sync->code = SYN_REPORT;
             send_input(event_sync);
+            // restore
+            event_key->type = EV_KEY;
             break;
 
         // Mouse Button
