@@ -1,28 +1,20 @@
 
 URL := https://android.googlesource.com/platform
 BASE_TAG := android-4.4.2_r2.0.1
-SKIA_TAG := android-4.4.2_r2.0.1
 
-all: PlatformInclude/frameworks/native \
-	PlatformInclude/hardware/libhardware \
-	PlatformInclude/system/core \
-	external/skia
+all: frameworks/native/include \
+     hardware/libhardware/include \
+     system/core/include \
+     external/skia/include \
+     external/skia/src
 
-PlatformInclude/%:
-	$(info downloading $*/include:$(BASE_TAG))
-	mkdir -p $*/include
-	wget -O - $(URL)/$*/+archive/refs/tags/$(BASE_TAG)/include.tar.gz | \
-	tar -xzC $*/include
-
-external/skia:
-	$(info downloading $@:$(SKIA_TAG))
-	mkdir -p $@ $@/include $@/src
-	wget -O - $(URL)/$@/+archive/refs/tags/$(SKIA_TAG)/include.tar.gz | \
-	tar -xzC $@/include
-	wget -O - $(URL)/$@/+archive/refs/tags/$(SKIA_TAG)/src.tar.gz | \
-	tar -xzC $@/src
+%:
+	@echo "downloading \033[32m$@\033[0m"
+	mkdir -p $*
+	wget -O - $(URL)/$(dir $*)+archive/refs/tags/$(BASE_TAG)/$(notdir $*).tar.gz | \
+	tar -xzC $*
 
 clean:
 	rm -rf external frameworks hardware system
 
-.PHONY: clean
+.PHONY: clean all
