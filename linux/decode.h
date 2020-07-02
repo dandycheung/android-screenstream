@@ -13,5 +13,5 @@ typedef struct my_error_mgr *my_error_ptr;
 
 extern char *xdata;
 extern struct jpeg_decompress_struct cinfo;
-int decode_jpeg_init(const unsigned char *buff, ssize_t size);
-int decode_jpeg_run(const unsigned char *buff, ssize_t size);
+int decode_jpeg_init(unsigned char *buff, ssize_t size);
+int decode_jpeg_run(unsigned char *buff, ssize_t size);

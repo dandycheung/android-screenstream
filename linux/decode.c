@@ -35,7 +35,7 @@ int decode_jpeg_decompress()
     while (cinfo.output_scanline < cinfo.output_height)
     {
         prow[0] = xdata + (cinfo.output_scanline * cinfo.output_width * 4);
-        prow[1] = xdata + ((cinfo.output_scanline+1) * cinfo.output_width * 4);
+        prow[1] = xdata + ((cinfo.output_scanline + 1) * cinfo.output_width * 4);
         jpeg_read_scanlines(&cinfo, prow, 2);
     }
     /* Step 7: Finish decompression */
@@ -43,7 +43,7 @@ int decode_jpeg_decompress()
     return 1;
 }
 
-int decode_jpeg_init(const unsigned char *buff, ssize_t size)
+int decode_jpeg_init(unsigned char *buff, ssize_t size)
 {
     JDIMENSION max_size;
     /* Step 1: allocate and initialize JPEG decompression object */
@@ -68,7 +68,7 @@ int decode_jpeg_init(const unsigned char *buff, ssize_t size)
     return decode_jpeg_decompress();
 }
 
-int decode_jpeg_run(const unsigned char *buff, ssize_t size)
+int decode_jpeg_run(unsigned char *buff, ssize_t size)
 {
 
     /* Step 2: specify data source (eg, a file) */

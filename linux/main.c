@@ -60,7 +60,7 @@ static void update_device_info(const struct sockaddr_in *const dev)
     printf("Device Connected: %s:%d\n", inet_ntoa(device_addr.sin_addr), ntohs(device_addr.sin_port));
 }
 
-static setup_connection(uint16_t port)
+static void setup_connection(uint16_t port)
 {
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -180,7 +180,7 @@ static void send_input(struct input_event *e)
 #ifdef INPUT_DEBUG
     print_event(e->type, e->code, e->value);
 #endif
-    return sendto(fd, buf, INPUT_BINARY_SIZE, 0, &device_addr, __SOCK_SIZE__);
+    sendto(fd, buf, INPUT_BINARY_SIZE, 0, (struct sockaddr *)&device_addr, __SOCK_SIZE__);
 }
 static int map_mouse_button(int btn)
 {
@@ -188,7 +188,7 @@ static int map_mouse_button(int btn)
     {
     case 1: // left
         return BTN_TOUCH;
-    case 2: // midd
+    case 2: // middle
         return KEY_F17;
     case 3: // right
         return KEY_BACK;
@@ -206,9 +206,9 @@ void send_touch_position(int32_t x, int32_t y)
     event_abs->code = ABS_MT_TOUCH_MAJOR;
     event_abs->value = 0x2a;
     send_input(event_abs);
-    event_abs->code = ABS_MT_TRACKING_ID;
-    event_abs->value = 0;
-    send_input(event_abs);
+    // event_abs->code = ABS_MT_TRACKING_ID;
+    // event_abs->value = 0;
+    // send_input(event_abs);
     event_abs->code = ABS_MT_POSITION_X;
     event_abs->value = x * 2;
     send_input(event_abs);
@@ -237,6 +237,7 @@ void send_keypress(uint16_t key)
     event_sync->code = SYN_REPORT;
     send_input(event_sync);
 }
+
 void setup_window(Display **display, XImage **ximage)
 {
     char str[100];
@@ -288,17 +289,13 @@ void setup_window(Display **display, XImage **ximage)
 
 int main(void)
 {
-    char str[100];
     XEvent e;
     pthread_t thread_id;
     uint16_t port = 1234;
     XImage *ximage;
     Display *display;
     KeySym keysym;
-    int input_fd, btn;
-
-    // struct touch_point touch_stack[TOUCH_STACK_SIZE + 1];
-    // int touch_index = -1;
+    int btn;
 
     memset(&listen_addr, 0, __SOCK_SIZE__);
     memset(&device_addr, 0, __SOCK_SIZE__);
@@ -310,33 +307,38 @@ int main(void)
     setup_input();
 
     setup_window(&display, &ximage);
-    send_touch_position(0xff, 0xff);
-    //send_keypress(KEY_F17);
+
+    send_keypress(KEY_F17);
 
     pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 
     while (1)
     {
+
         XNextEvent(display, &e);
+
         switch (e.type)
         {
+
         // Resize
         case Expose:
             pthread_mutex_lock(&mutex1);
             XPutImage(display, window, DefaultGC(display, 0), ximage, 0, 0, 0, 0, cinfo.output_width, cinfo.output_height);
             pthread_mutex_unlock(&mutex1);
             break;
+
         // Keyboard key
         case KeyRelease:
         case KeyPress:
-            keysym = XLookupKeysym(&e, 0);
-            printf("KEY: %d  %d %s %s\n", e.xkey.keycode, keysym, XKeysymToString(keysym), e.type == KeyPress ? "DOWN" : "UP");
+            keysym = XLookupKeysym((XKeyEvent *)&e, 0);
+            printf("KEY: %d  %lu %s %s\n", e.xkey.keycode, keysym, XKeysymToString(keysym), e.type == KeyPress ? "DOWN" : "UP");
             event_key->code = keysym;
             event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
             send_input(event_key);
             event_sync->code = SYN_REPORT;
             send_input(event_sync);
             break;
+
         // Mouse Button
         case ButtonPress:
         case ButtonRelease:
@@ -361,6 +363,7 @@ int main(void)
                 send_input(event_sync);
             }
             break;
+
         case MotionNotify:
             if (e.xbutton.x < 0 || e.xbutton.y < 0 || e.xbutton.x > wSize.w || e.xbutton.y > wSize.h)
             {

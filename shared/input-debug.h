@@ -1,4 +1,5 @@
 #pragma once
+#include <stdio.h>
 #include <linux/input.h>
 // From android/system/core/toolbox/getevent
 struct label
@@ -16,13 +17,13 @@ struct label
                 NULL, -1 \
         }
 
-static struct label input_prop_labels[] = {
-    LABEL(INPUT_PROP_POINTER),
-    LABEL(INPUT_PROP_DIRECT),
-    LABEL(INPUT_PROP_BUTTONPAD),
-    LABEL(INPUT_PROP_SEMI_MT),
-    LABEL_END,
-};
+// static struct label input_prop_labels[] = {
+//     LABEL(INPUT_PROP_POINTER),
+//     LABEL(INPUT_PROP_DIRECT),
+//     LABEL(INPUT_PROP_BUTTONPAD),
+//     LABEL(INPUT_PROP_SEMI_MT),
+//     LABEL_END,
+// };
 
 static struct label ev_labels[] = {
     LABEL(EV_SYN),
@@ -660,36 +661,36 @@ static struct label snd_labels[] = {
     LABEL_END,
 };
 
-static struct label id_labels[] = {
-    LABEL(ID_BUS),
-    LABEL(ID_VENDOR),
-    LABEL(ID_PRODUCT),
-    LABEL(ID_VERSION),
-    LABEL_END,
-};
+// static struct label id_labels[] = {
+//     LABEL(ID_BUS),
+//     LABEL(ID_VENDOR),
+//     LABEL(ID_PRODUCT),
+//     LABEL(ID_VERSION),
+//     LABEL_END,
+// };
 
-static struct label bus_labels[] = {
-    LABEL(BUS_PCI),
-    LABEL(BUS_ISAPNP),
-    LABEL(BUS_USB),
-    LABEL(BUS_HIL),
-    LABEL(BUS_BLUETOOTH),
-    LABEL(BUS_VIRTUAL),
-    LABEL(BUS_ISA),
-    LABEL(BUS_I8042),
-    LABEL(BUS_XTKBD),
-    LABEL(BUS_RS232),
-    LABEL(BUS_GAMEPORT),
-    LABEL(BUS_PARPORT),
-    LABEL(BUS_AMIGA),
-    LABEL(BUS_ADB),
-    LABEL(BUS_I2C),
-    LABEL(BUS_HOST),
-    LABEL(BUS_GSC),
-    LABEL(BUS_ATARI),
-    LABEL(BUS_SPI),
-    LABEL_END,
-};
+// static struct label bus_labels[] = {
+//     LABEL(BUS_PCI),
+//     LABEL(BUS_ISAPNP),
+//     LABEL(BUS_USB),
+//     LABEL(BUS_HIL),
+//     LABEL(BUS_BLUETOOTH),
+//     LABEL(BUS_VIRTUAL),
+//     LABEL(BUS_ISA),
+//     LABEL(BUS_I8042),
+//     LABEL(BUS_XTKBD),
+//     LABEL(BUS_RS232),
+//     LABEL(BUS_GAMEPORT),
+//     LABEL(BUS_PARPORT),
+//     LABEL(BUS_AMIGA),
+//     LABEL(BUS_ADB),
+//     LABEL(BUS_I2C),
+//     LABEL(BUS_HOST),
+//     LABEL(BUS_GSC),
+//     LABEL(BUS_ATARI),
+//     LABEL(BUS_SPI),
+//     LABEL_END,
+// };
 
 static struct label mt_tool_labels[] = {
     LABEL(MT_TOOL_FINGER),

@@ -66,7 +66,6 @@ int main(int argc, char const *argv[])
     if (argc == 1)
         DIE("no IP target");
 
-
     targetIP = inet_addr(argv[1]);
 
     delay = 1000000 / fps;

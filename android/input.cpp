@@ -16,12 +16,12 @@
 #include "main.h"
 #include "input.h"
 
-int fd_input, udp_input;
-struct input_event *event_key, *event_sync;
-uint8_t event_size;
-pthread_t input_thread_id;
+static int fd_input, udp_input;
+static struct input_event *event_key, *event_sync;
+static uint8_t event_size;
+static pthread_t input_thread_id;
 
-void *input_thread(void *)
+static void *input_thread(void *)
 {
     uint8_t buf[INPUT_BINARY_SIZE];
     struct input_event e;
@@ -46,14 +46,13 @@ void *input_thread(void *)
 #ifdef INPUT_DEBUG
         print_event(e.type, e.code, e.value);
 #endif
+        usleep(1000);
     }
 }
 
 void input_setup(uint16_t port)
 {
     int version;
-    sockaddr_in *listen_addr;
-    listen_addr = (sockaddr_in *)calloc(__SOCK_SIZE__, 1);
 
     event_size = sizeof(input_event);
     event_key = (input_event *)calloc(event_size, 1);
@@ -63,10 +62,6 @@ void input_setup(uint16_t port)
     fd_input = open("/dev/input/event4", O_RDWR);
     if (ioctl(fd_input, EVIOCGVERSION, &version))
         DIE("open input");
-
-    listen_addr->sin_family = AF_INET;
-    listen_addr->sin_addr.s_addr = INADDR_ANY;
-    listen_addr->sin_port = htons(port);
 
     if (pthread_create(&input_thread_id, NULL, &input_thread, NULL) != 0)
         DIE("Fail starting input thread");
