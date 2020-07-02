@@ -65,6 +65,9 @@ static int input_setup_uinput()
         return 0;
     }
 
+    //enable direct
+    ioctl(fd_input, UI_SET_PROPBIT, INPUT_PROP_DIRECT);
+
     // Keyboard
     if (ioctl(fd_input, UI_SET_EVBIT, EV_KEY) < 0)
     {
@@ -72,10 +75,7 @@ static int input_setup_uinput()
         return 0;
     }
 
-    ioctl(fd_input, UI_SET_KEYBIT, BTN_TOUCH);
-    ioctl(fd_input, UI_SET_KEYBIT, KEY_F17);
-
-    for (i = KEY_ESC; i < KEY_MICMUTE; i++)
+    for (i = KEY_ESC; i <= KEY_F17; i++)
     {
         ioctl(fd_input, UI_SET_KEYBIT, i);
     }
