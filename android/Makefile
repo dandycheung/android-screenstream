@@ -43,7 +43,7 @@ clean:
 exec: build
 	@adb $(ADB_FLAGS) push $(NDK_OUT)/$(APP_ABI)/$(MODULE_NAME) /data/local/tmp/ > /dev/null
 	@echo ------------------------
-	@adb $(ADB_FLAGS) shell " \
+	@adb $(ADB_FLAGS) shell -n " \
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
