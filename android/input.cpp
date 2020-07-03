@@ -51,7 +51,6 @@ static void *input_thread(void *)
         // is kbd or touch? check flag
         if (INPUT_BINARY_CHECK_KEYBOARD(buf[0]))
         {
-            printf("Got keyboard events\n");
             write(input_kbd, &e, event_size);
         }
         else

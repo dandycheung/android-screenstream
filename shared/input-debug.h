@@ -796,14 +796,14 @@ void print_event(int type, int code, int value)
         if (type_label)
                 printf("%-12.12s", type_label);
         else
-                printf("%04x        ", type);
+                printf("%04x     ", type);
         if (code_label)
                 printf(" %-20.20s", code_label);
         else
-                printf(" %04x                ", code);
+                printf(" %04x    ", code);
         if (value_label)
-                printf(" %-20.20s", value_label);
+                printf(" %-8.8s", value_label);
         else
-                printf(" %08x            ", value);
+                printf(" %08x", value);
         printf("\n");
 }
