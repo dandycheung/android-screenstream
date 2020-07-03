@@ -18,12 +18,10 @@
 #include "decode.h"
 #include "keycodes.h"
 
-
 #define BTN_STATE_UP 0
 #define BTN_STATE_DOWN 1
 #define BTN_STATE_REPEAT 2
 #define BUFF_SIZE 102400
-
 
 struct _wSize
 {
@@ -148,7 +146,7 @@ void setup_input(Display *display)
     event_sync->type = EV_SYN;
 }
 
-static void send_input(struct input_event *e)
+static void send_input(struct input_event *e, int is_keyboard)
 {
     uint8_t buf[INPUT_BINARY_SIZE];
 
@@ -161,6 +159,12 @@ static void send_input(struct input_event *e)
     // 2 byte is enough
     buf[4] = e->value >> 8;
     buf[5] = e->value;
+
+    if (is_keyboard)
+    {
+        buf[0] = INPUT_BINARY_SET_KEYBOARD(buf[0]);
+    }
+
 #ifdef INPUT_DEBUG
     print_event(e->type, e->code, e->value);
 #endif
@@ -187,48 +191,50 @@ static int map_mouse_button(int btn)
 
 void send_touch_position(int32_t x, int32_t y)
 {
-    // event_abs->code = ABS_MT_TOUCH_MAJOR;
-    // event_abs->value = 0x2a;
-    // send_input(event_abs);
+    event_abs->code = ABS_MT_TOUCH_MAJOR;
+    event_abs->value = 0x10;
+    send_input(event_abs, 0);
     // event_abs->code = ABS_MT_TRACKING_ID;
     // event_abs->value = 0;
-    // send_input(event_abs);
-    // event_abs->code = ABS_MT_POSITION_X;
-    // event_abs->value = x * 2;
-    // send_input(event_abs);
-    // event_abs->code = ABS_MT_POSITION_Y;
-    // event_abs->value = y * 2;
-    // send_input(event_abs);
-    // event_sync->code = SYN_MT_REPORT;
-    // send_input(event_sync);
-    event_abs->code = ABS_X;
+    // send_input(event_abs, 0);
+    event_abs->code = ABS_MT_POSITION_X;
     event_abs->value = x * 2;
-    send_input(event_abs);
-    event_abs->code = ABS_Y;
+    send_input(event_abs, 0);
+    event_abs->code = ABS_MT_POSITION_Y;
     event_abs->value = y * 2;
-    send_input(event_abs);
-    event_abs->code = ABS_Z;
-    event_abs->value = 0;
-    send_input(event_abs);
+    send_input(event_abs, 0);
+    event_sync->code = SYN_MT_REPORT;
+    send_input(event_sync, 0);
+
+    // event_abs->code = ABS_X;
+    // event_abs->value = x * 2;
+    // send_input(event_abs, 0);
+    // event_abs->code = ABS_Y;
+    // event_abs->value = y * 2;
+    // send_input(event_abs, 0);
+    // event_abs->code = ABS_Z;
+    // event_abs->value = 0;
+    // send_input(event_abs, 0);
+
     event_sync->code = SYN_REPORT;
-    send_input(event_sync);
+    send_input(event_sync, 0);
 }
 void send_keypress(uint16_t key)
 {
 
     event_key->code = key;
     event_key->value = 1;
-    send_input(event_key);
+    send_input(event_key, 1);
 
     event_sync->code = SYN_REPORT;
-    send_input(event_sync);
+    send_input(event_sync, 1);
 
     event_key->code = key;
     event_key->value = 0;
-    send_input(event_key);
+    send_input(event_key, 1);
 
     event_sync->code = SYN_REPORT;
-    send_input(event_sync);
+    send_input(event_sync, 1);
 }
 
 void setup_window(Display **display, XImage **ximage)
@@ -333,9 +339,9 @@ int main(void)
             {
                 event_key->code = keycodes[e.xkey.keycode];
                 event_key->value = e.type == KeyPress ? BTN_STATE_DOWN : BTN_STATE_UP;
-                send_input(event_key);
+                send_input(event_key, 1);
                 event_sync->code = SYN_REPORT;
-                send_input(event_sync);
+                send_input(event_sync, 1);
             }
             break;
 
@@ -351,7 +357,7 @@ int main(void)
             printf("X-Press/Release: %s\n", e.type == ButtonPress ? "DOWN" : "UP");
             event_key->code = btn;
             event_key->value = e.type == ButtonPress ? BTN_STATE_DOWN : BTN_STATE_UP;
-            send_input(event_key);
+            send_input(event_key, 0);
             if (btn == BTN_TOUCH)
             {
                 // Send location too
@@ -360,7 +366,7 @@ int main(void)
             else
             {
                 event_sync->code = SYN_REPORT;
-                send_input(event_sync);
+                send_input(event_sync, 0);
             }
             break;
 

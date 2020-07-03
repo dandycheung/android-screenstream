@@ -85,14 +85,14 @@ int main(int argc, char const *argv[])
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    input_setup(port);
-    input_press(KEY_F17);
-
     ProcessState::self()->startThreadPool();
     display = SurfaceComposerClient::getBuiltInDisplay(ISurfaceComposer::eDisplayIdMain);
 
     if (SurfaceComposerClient::getDisplayInfo(display, &mainDpyInfo) != NO_ERROR)
         DIE("ERROR: unable to get display characteristics");
+
+    input_setup();
+    input_press(KEY_F17);
 
     scalled_width = mainDpyInfo.w / 2;
     scalled_height = mainDpyInfo.h / 2;

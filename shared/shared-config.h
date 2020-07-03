@@ -1,6 +1,10 @@
 #pragma once
 
 #define INPUT_BINARY_SIZE 6
+#define INPUT_BINARY_MASK_KEYBOARD 0b10000000
+#define INPUT_BINARY_SET_KEYBOARD(b) (b | INPUT_BINARY_MASK_KEYBOARD)
+#define INPUT_BINARY_CHECK_KEYBOARD(b) (b & INPUT_BINARY_MASK_KEYBOARD)
+#define INPUT_BINARY_NO_MASK(b) (b & ~INPUT_BINARY_MASK_KEYBOARD)
 
 #define DIE(str, args...)             \
     do                                \
