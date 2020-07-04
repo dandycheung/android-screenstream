@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -24,7 +26,13 @@
 #include "input.h"
 
 using namespace android;
-int fd;
+
+static struct sigaction defaultSigHandlerINT;
+//static struct sigaction defaultSigHandlerHUP;
+static int device_state = 0;
+static pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+int net_fd;
+
 static SkBitmap::Config flinger2skia(PixelFormat f)
 {
     switch (f)
@@ -36,18 +44,76 @@ static SkBitmap::Config flinger2skia(PixelFormat f)
     }
 }
 
-int is_screen_locked()
+void *sleep_watcher(void *arg)
 {
-    Vector<String16> args;
-    sp<IServiceManager> sm = defaultServiceManager();
-    sp<IBinder> service = sm->checkService(String16("power"));
-    int err = service->dump(STDOUT_FILENO, args);
-    if (err != 0)
-        printf("error: get power service");
-
-    return 0;
+    int fds[] = {0, 0}, *cur_fd;
+    size_t ret;
+    char ch;
+    fds[0] = open("/sys/power/wait_for_fb_sleep", O_RDONLY);
+    fds[1] = open("/sys/power/wait_for_fb_wake", O_RDONLY);
+    cur_fd = &fds[device_state];
+    while (device_state != DEVICE_STATE_EXIT)
+    {
+        ret = read(*cur_fd, &ch, 0);
+        pthread_mutex_lock(&mutex1);
+        device_state = !device_state;
+        cur_fd = &fds[device_state];
+        pthread_mutex_unlock(&mutex1);
+        printf("** Device is %s\n", device_state == DEVICE_STATE_WAKE ? "WAKED" : "SLEEPT");
+    }
+    close(fds[0]);
+    close(fds[1]);
+    printf("** Sleeping watcher thread exited\n");
+    return NULL;
 }
+/*
+ * Catch keyboard interrupt signals.  On receipt, the "stop requested"
+ * flag is raised, and the original handler is restored (so that, if
+ * we get stuck finishing, a second Ctrl-C will kill the process).
+ */
+static void signalCatcher(int signum)
+{
+    pthread_mutex_lock(&mutex1);
+    device_state = DEVICE_STATE_EXIT;
+    pthread_mutex_unlock(&mutex1);
 
+    printf("Exiting..\n");
+
+    switch (signum)
+    {
+    case SIGINT:
+    case SIGHUP:
+        sigaction(SIGINT, &defaultSigHandlerINT, NULL);
+        //sigaction(SIGHUP, &defaultSigHandlerHUP, NULL);
+        break;
+    default:
+        abort();
+        break;
+    }
+}
+/*
+ * Configures signal handlers.  The previous handlers are saved.
+ *
+ * If the command is run from an interactive adb shell, we get SIGINT
+ * when Ctrl-C is hit.  If we're run from the host, the local adb process
+ * gets the signal, and we get a SIGHUP when the terminal disconnects.
+ */
+static void configureSignals()
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = signalCatcher;
+    if (sigaction(SIGINT, &act, &defaultSigHandlerINT) != 0)
+    {
+        printf("Unable to configure SIGINT\n");
+    }
+    // if (sigaction(SIGHUP, &act, &defaultSigHandlerHUP) != 0)
+    // {
+    //     status_t err = -errno;
+    //     fprintf(stderr, "Unable to configure SIGHUP handler: %s\n",
+    //             strerror(errno));
+    // }
+}
 int main(int argc, char const *argv[])
 {
     uint32_t targetIP;
@@ -65,6 +131,7 @@ int main(int argc, char const *argv[])
     DisplayInfo mainDpyInfo;
     sp<IBinder> display;
     uint32_t scalled_width, scalled_height, format, stride;
+    pthread_t sleep_thread;
 
     if (argc == 1)
         DIE("no IP target");
@@ -73,17 +140,21 @@ int main(int argc, char const *argv[])
 
     delay = 1000000 / fps;
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    configureSignals();
+    if (pthread_create(&sleep_thread, NULL, sleep_watcher, NULL) != 0)
+    {
+        printf("Fail starting sleep watcher thread\n");
+    }
 
-    if (fd == -1)
+    net_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (net_fd == -1)
         DIE("Fail creating socket");
 
     memset(&target, 0, addr_size);
     target.sin_family = AF_INET;
     target.sin_addr.s_addr = targetIP;
     target.sin_port = htons(port);
-    int flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
     ProcessState::self()->startThreadPool();
     display = SurfaceComposerClient::getBuiltInDisplay(ISurfaceComposer::eDisplayIdMain);
@@ -104,15 +175,26 @@ int main(int argc, char const *argv[])
         bpp = bytesPerPixel(format);
         bmpConfig = flinger2skia(format);
         bmp.setConfig(bmpConfig, scalled_width, scalled_height, stride * bpp);
-        printf("Screen format %d: stride %d, scalled %dx%dx%d\n", format, stride, scalled_width, scalled_height, bpp);
+        printf("Screen scalled to %dx%dx%d\n", scalled_width, scalled_height, bpp);
     }
     else
         DIE("Fail getting screenshot\n");
 
-    printf("Sending to %s, scalled screen %dx%d\n", inet_ntoa(target.sin_addr), scalled_width, scalled_height);
-
-    while (1)
+    printf("Sending to %s\n", inet_ntoa(target.sin_addr));
+    pthread_mutex_lock(&mutex1);
+    while (device_state != DEVICE_STATE_EXIT)
     {
+        if (device_state == DEVICE_STATE_SLEEP)
+        {
+            pthread_mutex_unlock(&mutex1);
+            // send empty packet, so server know our addr & port and can send input back
+            // to our address even device is slept by sending FK17 (Middle Mouse).
+            sendto(net_fd, NULL, 0, 0, (struct sockaddr *)&target, __SOCK_SIZE__);
+            sleep(1);
+            continue;
+        }
+        pthread_mutex_unlock(&mutex1);
+
         // Todo: detect screen sleep, dont send anything
         if (screenshot.update(display, scalled_width, scalled_height) == NO_ERROR)
         {
@@ -120,7 +202,7 @@ int main(int argc, char const *argv[])
             SkImageEncoder::EncodeStream(&stream, bmp, SkImageEncoder::kJPEG_Type, 70);
             streamData = stream.copyToData();
 
-            sendto(fd, streamData->data(), streamData->size(), 0, (struct sockaddr *)&target, __SOCK_SIZE__);
+            sendto(net_fd, streamData->data(), streamData->size(), 0, (struct sockaddr *)&target, __SOCK_SIZE__);
             //send(fd, streamData->data(), streamData->size(), 0);
             streamData->unref();
             stream.reset();
@@ -132,5 +214,6 @@ int main(int argc, char const *argv[])
         usleep(delay);
     }
 
+    printf("Main thread exit.\n");
     return 0;
 }

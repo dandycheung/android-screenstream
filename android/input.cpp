@@ -35,7 +35,7 @@ static void *input_thread(void *)
     while (1)
     {
         // TODO: Lock in target ip
-        received = recv(fd, &buf, INPUT_BINARY_SIZE, 0);
+        received = recv(net_fd, &buf, INPUT_BINARY_SIZE, 0);
         if (received <= 0)
             continue;
         //  we only use EV_KEY and EV_ABS this value never larger than 1 byte. Use it as flag
@@ -61,7 +61,6 @@ static void *input_thread(void *)
 #ifdef INPUT_DEBUG
         print_event(e.type, e.code, e.value);
 #endif
-        usleep(1000);
     }
 }
 

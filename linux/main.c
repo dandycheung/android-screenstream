@@ -80,25 +80,31 @@ static void receiver_thread(Window *window)
     {
         sender_size = __SOCK_SIZE__;
         received = recvfrom(fd, (unsigned char *)&buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
-        if (received > 0)
+        if (received >= 0)
         {
             if (device_addr.sin_addr.s_addr != sender.sin_addr.s_addr ||
                 device_addr.sin_port != sender.sin_port)
             {
-                // printf("Ignoring packet from different initial IP: %s.\n", inet_ntoa(sender->sin_addr));
                 // continue;
                 pthread_mutex_lock(&mutex1);
                 update_device_info(&sender);
                 pthread_mutex_unlock(&mutex1);
             }
-            frame_received++;
-            if (!decode_jpeg_run(&buff, received))
+            if (received == 0)
             {
-                fprintf(stderr, "Fail decode jpeg\n");
+                printf("Device is sleept, use Middle Mouse to wakeup.\n");
             }
-            XSendEvent(display, *window, False, ExposureMask, &exppp);
-            XFlush(display);
-            //printf("%lu: %lu\n", frame_received, received);
+            else if (received > 0)
+            {
+
+                frame_received++;
+                if (!decode_jpeg_run(&buff, received))
+                {
+                    fprintf(stderr, "Fail decode jpeg\n");
+                }
+                XSendEvent(display, *window, False, ExposureMask, &exppp);
+                XFlush(display);
+            }
         }
         else
         {
@@ -121,9 +127,15 @@ int initial_size()
         received = recvfrom(fd, buff, BUFF_SIZE, 0, (struct sockaddr *)&sender, &sender_size);
         printf("%lu\n", received);
 
-        if (received > 0)
+        if (received >= 0)
         {
             update_device_info(&sender);
+            if (received == 0)
+            {
+                //device is slept wake it up, so we can get the screen
+                send_keypress(KEY_F17);
+                continue;
+            }
             decode_jpeg_init(buff, received);
             wSize.w = cinfo.image_width;
             wSize.h = cinfo.image_height;
@@ -135,7 +147,7 @@ int initial_size()
     return 1;
 }
 
-void setup_input(Display *display)
+void setup_input()
 {
     event_size = sizeof(struct input_event);
     event_key = (struct input_event *)calloc(event_size, 1);
@@ -194,27 +206,17 @@ void send_touch_position(int32_t x, int32_t y)
     event_abs->code = ABS_MT_TOUCH_MAJOR;
     event_abs->value = 0x10;
     send_input(event_abs, 0);
-    // event_abs->code = ABS_MT_TRACKING_ID;
-    // event_abs->value = 0;
-    // send_input(event_abs, 0);
+
     event_abs->code = ABS_MT_POSITION_X;
     event_abs->value = x * 2;
+
     send_input(event_abs, 0);
     event_abs->code = ABS_MT_POSITION_Y;
     event_abs->value = y * 2;
     send_input(event_abs, 0);
+
     event_sync->code = SYN_MT_REPORT;
     send_input(event_sync, 0);
-
-    // event_abs->code = ABS_X;
-    // event_abs->value = x * 2;
-    // send_input(event_abs, 0);
-    // event_abs->code = ABS_Y;
-    // event_abs->value = y * 2;
-    // send_input(event_abs, 0);
-    // event_abs->code = ABS_Z;
-    // event_abs->value = 0;
-    // send_input(event_abs, 0);
 
     event_sync->code = SYN_REPORT;
     send_input(event_sync, 0);
@@ -300,13 +302,11 @@ int main(void)
 
     setup_connection(port);
 
+    setup_input();
+
     initial_size();
 
     setup_window(&display, &ximage);
-
-    setup_input(display);
-
-    send_keypress(KEY_F17);
 
     pthread_create(&thread_id, NULL, (void *)&receiver_thread, &window);
 
