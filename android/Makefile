@@ -6,6 +6,10 @@ ifndef ANDROID_NDK_HOME
 ANDROID_NDK_HOME=$(ANDROID_SDK_ROOT)/ndk
 endif
 
+ifndef IP
+	IP := 192.168.1.10
+endif
+
 export MODULE_NAME := screenstream
 export PROJECT_PATH := $(PWD)
 export ROOT_PATH := $(dir $(PWD))
@@ -47,12 +51,12 @@ exec: build
 		cd /data/local/tmp/ && \
 		busybox chmod +x $(MODULE_NAME) && \
 		(pidof $(MODULE_NAME) && killall $(MODULE_NAME) || true ) && \
-		./$(MODULE_NAME) 192.168.1.10"
+		./$(MODULE_NAME) $(IP)"
 
 watch:
 	nodemon -V -i build/ -i include/ \
 		-e c,cpp,h \
 		-x "make 'ADB_FLAGS=$(ADB_FLAGS)' \
-			APPEND_CFLAGS=-DINPUT_DEBUG=1 exec || false"
+			'IP=$(IP)' exec || false"
 
 .PHONY: build clean exec
